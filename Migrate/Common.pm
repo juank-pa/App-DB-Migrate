@@ -12,7 +12,7 @@ use Migrate::Generate;
 our $action;
 use constant ACTIONS => qw{generate status run rollback};
 use constant ACTION_OPTIONS => {
-    generate => 'n:',
+    generate => 'tr:c:n:',
     status => '',
     run => '',
     rollback => '',
