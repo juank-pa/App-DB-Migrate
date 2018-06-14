@@ -15,10 +15,8 @@ main();
 
 sub main
 {
-    #my $dbh = Dbh::getDBH();
-    #Migrate::Common::initMigrations($dbh);
-    #classical 'ancient';
-    #Log::debug(PL 'criterion');
+    my $dbh = Dbh::getDBH();
+    Migrate::Common::initMigrations($dbh);
 
     Migrate::Common::execute();
 }
