@@ -1,5 +1,8 @@
 package Dbh;
 
+use strict;
+use warnings;
+
 use Log;
 use DBI;
 
@@ -7,7 +10,7 @@ our $_DBH = {};
 our $_DBHLockMode = 'wait';
 
 our $DBSchema = $ENV{MS_DBSchema};
-our $DbName = $ENV{MS_DBName};
+our $DBName = $ENV{MS_DBName};
 our $DBUserName = $ENV{MS_DBUserName};
 our $DBPassword = $ENV{MS_DBPassword};
 our $DBDataSource = $ENV{MS_DBDataSource};
@@ -85,10 +88,10 @@ sub _getDBHWithRetries
 {
     Log::enter_trace();
 
-    my $dbname      = shift or error_die("No db name");
-    my $datasource  = shift or error_die("No data source");
-    my $username    = shift or error_die("No username");
-    my $password    = shift or error_die("No password");
+    my $dbname      = shift or Log::error_die("No db name");
+    my $datasource  = shift or Log::error_die("No data source");
+    my $username    = shift or Log::error_die("No username");
+    my $password    = shift or Log::error_die("No password");
     my $is_informix = shift || 0;
 
     my $lock_attr = 'private_ww_lockmode';
@@ -152,7 +155,7 @@ sub _getDBHWithRetries
         eval
         {
             $dbh = DBI->connect($datasource, $username, $password, $DBOptions)
-                      or error_die("WWBaseObj.pm could not connect to database: $!\n");
+                      or Log::error_die("WWBaseObj.pm could not connect to database: $!\n");
         };
         if( $@ )
         {
@@ -167,7 +170,7 @@ sub _getDBHWithRetries
     # If we have still failed to connect to the db, well, that's pretty bad.
     if( !$dbh || !ref($dbh) )
     {
-        error_die("Could not connect to $dbname database ($datasource) after $tries tries");
+        Log::error_die("Could not connect to $dbname database ($datasource) after $tries tries");
     }
 
     ##################################################################
@@ -203,8 +206,8 @@ sub _getDBHWithRetries
 
                 undef $dbh;
                 $dbh = DBI->connect($datasource, $username, $password, $DBOptions)
-                     or error_die("WWBaseObj.pm could not re-connect to database: $!\n");
-                $dbh->do("set lock mode to " . $_DBHLockMode ) || error_die("Reconnect: Could not set lock mode to wait: " . $DBI::errstr);
+                     or Log::error_die("WWBaseObj.pm could not re-connect to database: $!\n");
+                $dbh->do("set lock mode to " . $_DBHLockMode ) || Log::error_die("Reconnect: Could not set lock mode to wait: " . $DBI::errstr);
                 $dbh->{$lock_attr} = $_DBHLockMode;
                 info("Re-connected db handle to $datasource to set the lock mode");
             }
