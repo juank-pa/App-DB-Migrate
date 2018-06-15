@@ -67,7 +67,7 @@ sub initMigrations
 {
     my $dbh = shift;
     createMigrationsFolder();
-    if (migrationsTableExists($dbh)) { Log::debug('Its alive!!'); return; }
+    if (migrationsTableExists($dbh)) { return; }
     createMigrationsTableQuery($dbh);
 }
 
