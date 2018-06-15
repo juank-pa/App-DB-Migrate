@@ -25,7 +25,8 @@ sub generate_file
 {
     my ($action, $subject, $table_name, $data) = (shift, shift, shift, shift);
 
-    my $package_name = getTimestamp()."_${action}_${subject}";
+    my $package_subject = $action eq 'generic'? $subject : "${action}_$subject";
+    my $package_name = getTimestamp()."_${package_subject}";
     my $target_filename = "migrations/$package_name.pl";
     my %replace = getReplacements($package_name, $table_name, $data);
 
@@ -43,7 +44,7 @@ sub generate_file
 
 sub getReplacements
 {
-    my ($package_name, $table_name, $data) = (shift, shift, shift // {});
+    my ($package_name, $table_name, $data) = (shift, shift // '', shift // {});
     my $pk = "${table_name}_id";
     return (
         'PACKAGE_NAME' => $package_name,
@@ -70,7 +71,7 @@ sub generate_create_table
     }
 
     my $data = {
-        'DBCOLUMNS' => join(",\n", map {"  $_"} @columns),
+        'DBADDCOLUMNS' => join(",\n", map {"  $_"} @columns),
         'DBADDREFERENCES' => join("\n", parse_references($table_name, $options->{r}, 1)),
         'DBDROPREFERENCES' => join("\n", parse_references($table_name, $options->{r}, 0)),
     };
@@ -133,14 +134,26 @@ sub drop_foreign_key
 
 sub generate_drop_table
 {
+    my $migration_name = shift;
+    generate_file('generic', "drop_table_$migration_name");
 }
 
 sub generate_add_column
 {
+    my $migration_name = shift;
+    generate_file('generic', "add_column_$migration_name");
 }
 
 sub generate_drop_column
 {
+    my $migration_name = shift;
+    generate_file('generic', "drop_column_$migration_name");
+}
+
+sub generate_generic
+{
+    my $migration_name = shift;
+    generate_file('generic', $migration_name);
 }
 
 sub plural
