@@ -10,6 +10,12 @@ in systems with restricted access.
 MVP will start handling SQL commands directly trying to be as generic as possible but I'll try to
 make it in such a way we could support the most common DBMs out there.
 
+## Current limitations
+1. I just started supporting Informix DB which I'm using at the time. I pretend to write adapters for
+   the most common DBMSs.
+2. The first MVP will be SQL based so it will be somewhat limiting and a bit less readable. After that I
+   plan to support a programmatic API that will handle db creation and manipulation.
+
 ## Setup
 This command requires access to a DBMS to allow running the migrations into it and to store migration
 tracking information.
