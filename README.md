@@ -24,18 +24,19 @@ To setup the command you'll need to export the following environment variables w
 required to connect to the DBMS:
 
 ```bash
-MS_DBSchema=<db_scema>
-MS_DBName=<db_name>
-MS_DBUserName=<db_user_name>
-MS_DBPassword=<db_user_password>
-MS_DBDataSource=<db_data_source>
+MS_SCHEMA=<db_scema>
+MS_USER=<db_user_name>
+MS_PASS=<db_user_password>
+MS_DSN=<db_data_source>
 ```
+
+The DSN must be formated as expected by DBI: `dbi:<Driver>:...`
 
 ## The Perl migrate.pl command
 The `migrate.pl` command won't do anything by itself, you should call it passing an additional action to perform.
 Valid actions are `generate`, `run`, `rollback` and `status`.
 
-### The Generate command
+### The generate command
 The generate command allows generating a perl module with two subroutines "up" and "down". Up will
 execute the SQL and down will have rollback commands. The only mandatory option is `-n` to specify the
 name of the migration:
@@ -54,10 +55,10 @@ write your SQL from scratch. But there are certain name prefixes that will creat
 
 #### create_table_<singular_table_name>
 This prefix will create a template prepopulated with a `CREATE TABLE` (and the corresponding `DROP TABLE` in down)
-SQL command and will use the rest of the command as the table name in the SQL. The table name must be in singular 
+SQL command and will use the rest of the command as the table name in the SQL. The table name must be in singular
 form (this is important). The template will also add a primary key based on the table name.
 
-You can also add columns from the same command line by using the `-c [columns]` option. Where columns is a comma 
+You can also add columns from the same command line by using the `-c [columns]` option. Where columns is a comma
 separated list of column names for you table. e.g. `-c age,name`. The columns option can have the following format:
 
 ```bash
@@ -76,5 +77,16 @@ When adding references, the corresponding foreign key constraint operations will
 ```bash
 -r singular_table_name[:datatype][:not_null][,...other_table_names]
 ```
+
+### The status command
+
+The status command will print a list of all known migrations. Every migration shows a status, the
+migration timestamp and its user friendly name.
+
+The status can be any of the following:
+* [up] Means the migration has already been applied to the database.
+* [down] Means the migration has not been already applied to the database.
+* [*] Means there exists a migration registered in the database that doesn't have a corresponding
+  file in the migration folder.
 
 To be continued...

@@ -8,6 +8,7 @@ use File::Path qw(make_path);
 use Getopt::Std;
 
 use Migrate::Generate;
+use Migrate::Status;
 
 our $action;
 use constant ACTIONS => qw{generate status run rollback};

@@ -2,11 +2,14 @@
 
 use strict;
 
-use lib ("$ENV{HOME}/perl");
+my $script_dir;
+BEGIN { ($script_dir = $0) =~ s/\/migrate//; }
+use lib ($script_dir);
 
 use Log;
 use Migrate::Common;
 use Migrate::Help;
+use DBI;
 
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 our $VERSION = '0.0.1';
