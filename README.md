@@ -89,4 +89,6 @@ The status can be any of the following:
 * [*] Means there exists a migration registered in the database that doesn't have a corresponding
   file in the migration folder.
 
+If instead of printing a user friendly migration name you prefer a file path use the `-f` option.
+
 To be continued...

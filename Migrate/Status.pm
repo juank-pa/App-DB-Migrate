@@ -6,12 +6,12 @@ use warnings;
 use feature 'say';
 use Dbh;
 
-sub file_to_migration_description (_);
+sub print_migration ($_);
 
 sub execute
 {
-    my @migrations = query_migrations();
-    print_migrations(\@migrations);
+    my $options = shift;
+    print_migrations(exists $options->{f});
 }
 
 sub query_migrations
@@ -25,39 +25,68 @@ EOF
 
 sub print_migrations
 {
+    my $filenames = shift // 0;
+    my @migrations = get_migrations();
+    print_migration($filenames) foreach @migrations;
+}
+
+sub print_migration ($_)
+{
+    my $filenames = shift // 0;
+    my $migration = shift;
+    my $description = $filenames? $migration->{path} : migration_description($migration);
+    printf("%-7s%s\n", "[$migration->{status}]", $description);
+}
+
+sub get_migrations
+{
     my $index = 0;
     my @files = get_migration_files();
-    my @migrations = map { $_->{migration_id} } @{scalar(shift)};
+    my @migrations = map { $_->{migration_id} } (query_migrations);
+    my @results;
 
     foreach my $file (@files) {
-        $file =~s/\.pl$//;
+        $file =~ s/\.pl$//;
         my $migration = shift @migrations;
 
         while ($migration && $migration lt $file) {
-            say('[*]    '.file_to_migration_description($migration));
+            push(@results, get_migration_data($migration, '*'));
             $migration = shift @migrations;
         }
 
         if (!$migration || $file ne $migration) {
-            print '[down] ';
+            push(@results, get_migration_data($file, 'down'));
             unshift(@migrations, $migration) if $migration;
         }
         else {
-            print('[up]   ');
+            push(@results, get_migration_data($migration, 'up'));
         }
-        say(file_to_migration_description($file));
     }
 
-    say('[*]    '.file_to_migration_description) foreach (@migrations);
+    push(@results, get_migration_data($_, '*')) foreach (@migrations);
+    return @results;
 }
 
-sub file_to_migration_description (_)
+sub get_migration_data
 {
-    my $file = shift or return '';
-    my @parts = split('_', $file);
+    my $migration_id = shift;
+    my $status = shift;
+    return {
+        id => $migration_id,
+        package => "_$migration_id",
+        path => "migrations/$migration_id.pl",
+        status => $status
+    };
+}
+
+sub migration_description
+{
+    my $migration = shift or return '';
+    my $id = $migration->{id};
+    my @parts = split('_', $id);
     my $timestamp = shift(@parts);
     my $description = join(' ', @parts);
-    return "$timestamp - \u$description";
+    return "$timestamp \u$description";
 }
 
 sub get_migration_files

@@ -14,7 +14,7 @@ our $action;
 use constant ACTIONS => qw{generate status run rollback};
 use constant ACTION_OPTIONS => {
     generate => 'tr:c:n:',
-    status => '',
+    status => 'f',
     run => '',
     rollback => '',
 };
