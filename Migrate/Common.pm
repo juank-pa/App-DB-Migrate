@@ -2,6 +2,8 @@ package Migrate::Common;
 
 use strict;
 use warnings;
+use feature 'say';
+
 use Log;
 use Dbh;
 use File::Path qw(make_path);
@@ -9,6 +11,11 @@ use Getopt::Std;
 
 use Migrate::Generate;
 use Migrate::Status;
+use Migrate::Run;
+use Migrate::Rollback;
+
+use List::Util qw(max);
+use Module::Load;
 
 our $action;
 use constant ACTIONS => qw{generate status run rollback};
@@ -20,6 +27,8 @@ use constant ACTION_OPTIONS => {
 };
 
 use feature "switch";
+
+sub run_migration (_);
 
 sub execute
 {
@@ -35,6 +44,55 @@ sub execute
 
     my $execute_sub = \&{"Migrate::\u${action}::execute"};
     $execute_sub->(\%options);
+}
+
+sub migrations_up
+{
+    run_migrations('down', -1);
+}
+
+sub migrations_down
+{
+    run_migrations('up', shift);
+}
+
+sub run_migrations
+{
+    my $filter = shift;
+    my @migrations = filtered_migrations($filter, @_);
+    run_migration foreach @migrations;
+}
+
+sub filtered_migrations
+{
+    my $filter = shift;
+    my $steps = shift // 1;
+
+    my @migrations = (grep { $_->{status} eq $filter } Migrate::Status::get_migrations());
+    $steps = scalar(@migrations) if $steps < 0;
+    @migrations = reverse @migrations if $filter eq 'up';
+
+    return @migrations[0 .. $steps - 1];
+}
+
+sub run_migration (_)
+{
+    my $migration = shift;
+    my $function = $migration->{status} eq 'down'? 'up' : 'down';
+
+    no strict 'refs';
+    load $migration->{path};
+
+    "$migration->{package}::$function"->(bless {}, 'Dbh');
+
+    my $dbh = Dbh::getDBH();
+
+    if ($function eq 'up') {
+        $dbh->do("INSERT INTO _migrations (migration_id) VALUES ('$migration->{id}')");
+    }
+    else {
+        $dbh->do("DELETE FROM _migrations WHERE migration_id = '$migration->{id}'");
+    }
 }
 
 sub pushBackOptions

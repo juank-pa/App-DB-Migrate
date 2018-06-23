@@ -95,7 +95,7 @@ sub get_migration_files
     opendir (DIR, $directory) or die 'There is no migrations folder';
     my @files = sort(readdir DIR);
     close DIR;
-    return @files[2..$#files];
+    return grep !/^\.+$/, @files;
 }
 
 return 1;

@@ -33,6 +33,21 @@ sub doSQL
     return $dbh->do($query);
 }
 
+sub do
+{
+    my $self = shift;
+    my @queries = split(';', shift);
+    my $dbh = getDBH();
+
+    foreach (@queries) {
+        eval {
+            $_ =~ s/^\s+//;
+            $_ =~ s/\s+$//;
+            $dbh->do($_) if $_;
+        }
+    }
+}
+
 sub runSQL
 {
     my $query = shift;
@@ -85,7 +100,7 @@ sub _getDBHWithRetries
     # This will be the dbh we return, assuming everything is copacetic.
     my $dbh = undef;
 
-    if( ref $_DBH && ($_DBH->{$lock_attr} eq $_DBHLockMode) ) {
+    if( ref $_DBH && defined $_DBH->{$lock_attr} && ($_DBH->{$lock_attr} eq $_DBHLockMode) ) {
         $dbh = $_DBH;
         $found_cached = 1;
     }
