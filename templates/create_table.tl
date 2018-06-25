@@ -2,22 +2,14 @@ package _{PACKAGE_NAME};
 
 sub up
 {
-    my $ms = shift;
-    $ms->do <<EOF;
-CREATE TABLE "{DBSCHEMA}".{DBTABLENAME} (
-{DBADDCOLUMNS}
-);
-CREATE UNIQUE INDEX "{DBSCHEMA}".ui_{DBTABLENAME}_{DBTABLEPK} ON {DBTABLENAME} ({DBTABLEPK});
-ALTER TABLE "{DBSCHEMA}".{DBTABLENAME} ADD CONSTRAINT PRIMARY KEY ({DBTABLEPK}) CONSTRAINT "{DBSCHEMA}".pk_{DBTABLENAME};
-{DBADDREFERENCES}
-EOF
-}
+    my $mh = shift;
+    $mh->create_table('{DBTABLENAME}', sub {
+        my $th = shift;
+{DBADDCOLUMNS}    });
+{DBADDREFERENCES}}
 
 sub down
 {
-    my $ms = shift;
-    $ms->do <<EOF;
-DROP INDEX "{DBSCHEMA}".ui_{DBTABLENAME}_{DBTABLEPK};
-DROP TABLE "{DBSCHEMA}".{DBTABLENAME};
-EOF
+    my $mh = shift;
+    $mh->drop_table('{DBTABLENAME}');
 }

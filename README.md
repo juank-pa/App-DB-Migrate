@@ -32,50 +32,66 @@ MS_DSN=<db_data_source>
 
 The DSN must be formated as expected by DBI: `dbi:<Driver>:...`
 
-## The Perl migrate.pl command
-The `migrate.pl` command won't do anything by itself, you should call it passing an additional action to perform.
+## The Perl migrate command
+The `migrate` command won't do anything by itself, you should call it passing an additional action to perform.
 Valid actions are `generate`, `run`, `rollback` and `status`.
 
 ### The generate command
-The generate command allows generating a perl module with two subroutines "up" and "down". Up will
-execute the SQL and down will have rollback commands. The only mandatory option is `-n` to specify the
-name of the migration:
+The generate command allows generating a perl module with two subroutines `up` and `down`. Up will
+execute commands to perform the migration while down will have rollback commands.
+The only mandatory option is `-n` to specify the name of the migration:
 
 ```bash
-migrate.pl generate -n my_migration
+migrate generate -n my_migration_name
 ```
 
-The above example will create a `migrations` folder under the current folder and will also create a file
-named *YYYYMMDDhhmmss_my_migration.pl* with a small template that will let you just add your SQL command.
-*YYYYMMDDhhmmss* refers to the current timestamp.
+The above example generates a `migrations` folder under the current folder and will also create a file
+named *YYYYMMDDhhmmss_my_migration.pl* were *YYYYMMDDhhmmss* refers to the current timestamp. The command
+prints the path of the newly generated file.
 
 #### The name IS important!
 If you use a command like the previous one a generic template will be created, and you'll have to
-write your SQL from scratch. But there are certain name prefixes that will create other helpful templates.
+write your migration from scratch. But there are certain migration names that will create other helpful templates.
 
 #### create_table_<singular_table_name>
-This prefix will create a template prepopulated with a `CREATE TABLE` (and the corresponding `DROP TABLE` in down)
-SQL command and will use the rest of the command as the table name in the SQL. The table name must be in singular
-form (this is important). The template will also add a primary key based on the table name.
+This prefix will create a template prepopulated with a `create_table` (and the corresponding `drop_table` in down)
+command and will use the rest of the migration name as the table name. The table name must be in singular form
+(this is important).
 
-You can also add columns from the same command line by using the `-c [columns]` option. Where columns is a comma
-separated list of column names for you table. e.g. `-c age,name`. The columns option can have the following format:
+*The -c option*
+
+You can add columns from the same command line by using the `-c [columns]` option. Where columns is a quoted space
+separated list of column for you table. e.g. `-c 'age name'`. This option has the following syntax:
 
 ```bash
--c column_name[:datatype][:not_null][,...other_columns]
+-c 'column_name[:datatype[(s,...)]][:not_null|:null][:index|:unique][ ...more_columns]'
 ```
 
-Additional colon separated column attributes can be placed in any order as long as the column name is always first.
-If `datatype`is not specified then `VARCHAR` is used.
+Additional colon separated column properties can be added for each column in any order as long as the column name is
+always first. Available column properties are:
 
-The `-r [singular_table_names]` option is very similar to the columns option but instead of receiving column names
-it receives other table names in singular form to create references (foreign keys) to those tables. You can use the
-same attributes as you do with the `-c` option. If `datatype`is not specified `INTEGER` is used.
+* *datatype:* available datatypes are: `string`, `char`, `text`, `integer`, `float`, `decimal`, `date`, and `datetime`.
+  These types map to SQL types depending on the driver e.g. `string` maps to `CHARVAR` on most DBMS. Datatypes can
+  receive size and precision attributes in parenthesis e.g. `integer(20)`. If datatype is not specified `string` is used
+  by default.
+* *not_null or null:* They specify whether the column is `null` or `not_null`. If not specified `null` is used.
+* *index or unique:* They specify whether to add a index or a unique index to the column. No index is added otherwise.
 
-When adding references, the corresponding foreign key constraint operations will be added for up and down.
+Example:
 
 ```bash
--r singular_table_name[:datatype][:not_null][,...other_table_names]
+migrate generate -n create_table_employee -c 'name:string:not_null age:integer:index email:unique'
+```
+
+*The -r option*
+
+The `-r [singular_table_names]` option is very similar to the columns option but instead of receiving column names
+it receives table names in singular form to create references (foreign keys) to those tables. You can use the
+same column properties you use for the `-c` option. If `datatype` is not specified `integer` is used by default.
+This option has the following syntax:
+
+```bash
+-r 'singular_table_name[:datatype[(s,...)]][:not_null|:null][:index|:unique][ ...more_table_names]'
 ```
 
 ### The status command

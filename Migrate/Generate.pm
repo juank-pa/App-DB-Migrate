@@ -3,8 +3,6 @@ package Migrate::Generate;
 use strict;
 use warnings;
 
-use Lingua::EN::Inflect qw{PL};
-
 use feature 'switch';
 
 sub execute
@@ -28,7 +26,7 @@ sub generate_file
     my $package_subject = $action eq 'generic'? $subject : "${action}_$subject";
     my $package_name = getTimestamp()."_${package_subject}";
     my $target_filename = "migrations/$package_name.pl";
-    my %replace = getReplacements($package_name, $table_name, $data);
+    my %replace = get_replacements($package_name, $table_name, $data);
 
     open(my $src, '<', "$ENV{HOME}/perl/templates/$action.tl");
     open(my $tgt, '>', $target_filename);
@@ -42,15 +40,13 @@ sub generate_file
     Log::debug("Created file: $target_filename");
 }
 
-sub getReplacements
+sub get_replacements
 {
     my ($package_name, $table_name, $data) = (shift, shift // '', shift // {});
     my $pk = "${table_name}_id";
     return (
         'PACKAGE_NAME' => $package_name,
-        'DBSCHEMA' => $Dbh::DBSchema,
-        'DBTABLENAME' => plural($table_name),
-        'DBTABLEPK' => $pk,
+        'DBTABLENAME' => $table_name,
         %$data
     );
 }
@@ -59,54 +55,70 @@ sub generate_create_table
 {
     my $table_name = shift;
     my $options = shift;
-    my @columns = ("${table_name}_id serial");
+    my @columns;
 
     push(@columns, parse_columns($options->{c}));
     push(@columns, parse_columns($options->{r}, 1));
 
     if (exists $options->{t}) {
-        my @timestamps = ('created_at', 'updated_at');
-        @timestamps = map { "$_ DATETIME YEAR TO SECOND DEFAULT CURRENT DATETIME YEAR TO SECOND NOT NULL" } @timestamps;
-        push(@columns, @timestamps);
+        push(@columns, 'timestamps');
     }
 
+    my @foreign_keys = parse_foreign_keys($table_name, $options->{r}, 1);
     my $data = {
-        'DBADDCOLUMNS' => join(",\n", map {"  $_"} @columns),
-        'DBADDREFERENCES' => join("\n", parse_references($table_name, $options->{r}, 1)),
-        'DBDROPREFERENCES' => join("\n", parse_references($table_name, $options->{r}, 0)),
+        'DBADDCOLUMNS' => join_lines(2, '$th->', @columns),
+        'DBADDREFERENCES' => join_lines(1, '$mh->', @foreign_keys),
     };
 
     generate_file('create_table', $table_name, $table_name, $data);
+}
+
+sub join_lines
+{
+    my $tabs = ' ' x (scalar(shift) * 4);
+    my $prefix = shift // '';
+    my $ret = join("\n", map {"$tabs$prefix$_;"} @_);
+    return $ret.($ret? "\n" : '');
 }
 
 sub parse_columns
 {
     my $columns_str = shift // return ();
     my $is_ref = shift;
-    my @columns = split ',', $columns_str;
+    my @columns = split qr/\s+/, $columns_str;
     return map { parse_column($_, $is_ref) // () } @columns;
 }
 
 sub parse_column
 {
     my $column_str = shift // return undef;
-    my $is_ref = scalar(shift)? '_id' : '';
+    my $is_ref = shift;
 
-    my $default_type = $is_ref? 'INTEGER' : 'VARCHAR';
     my @column_data = split(':', $column_str);
 
-    my $column_name = $column_data[0] // die('Column name is mandatory');
-    my ($column_type, $not_null) = ($default_type, '');
+    my $column_name = shift(@column_data) // die('Column name is mandatory');
+    my $column_type = 'string';
+    my @options;
 
-    foreach(@column_data[1..$#column_data]) {
-        when ('not_null') { $not_null = ' NOT NULL'}
-        default { $column_type = uc($_) }
+    foreach(@column_data) {
+        when ('not_null') { push @options, 'null => 0' }
+        when (/^(?:null|index|unique)$/) { push @options, "$_ => 1" }
+        when (/^(string|char|text|integer|float|decimal|date|datetime)(?:\((\d+(?:,\d+)*)\))?$/) {
+            $column_type = $1;
+            if ($2) {
+                my @attrs = split(',', $2);
+                push(@options, "limit => $attrs[0]") if scalar(@attrs) == 1;
+                push(@options, "precision => $attrs[0]", "scale => $attrs[1]") if scalar(@attrs) > 1;
+            }
+        }
     }
 
-    return "$column_name$is_ref $column_type$not_null";
+    my $options = @options? ', { '.join(', ', @options).' }' : '';
+    return $is_ref? qq[references '$column_name'] :
+                    qq[$column_type '$column_name'$options];
 }
 
-sub parse_references
+sub parse_foreign_keys
 {
     my $table_name = shift;
     my $columns_str = shift // return ();
@@ -118,18 +130,16 @@ sub parse_references
 
 sub add_foreign_key
 {
-    my $source_table = plural(shift);
+    my $source_table = shift;
     my $target_table = (split(':', scalar shift))[0];
-    my $field_name = $target_table . '_id';
-    $target_table = plural($target_table);
-    return qq{ALTER TABLE "$Dbh::DBSchema".$source_table ADD CONSTRAINT (FOREIGN KEY ($field_name) REFERENCES $target_table($field_name) CONSTRAINT "$Dbh::DBSchema".fk_${source_table}_$field_name)};
+    return qq{add_foreign_key '$source_table', '$target_table'};
 }
 
 sub drop_foreign_key
 {
-    my $source_table = plural(shift);
-    my $field_name = (split(':', scalar shift))[0].'_id';
-    return qq{DROP CONSTRAINT "$Dbh::DBSchema".fk_${source_table}_$field_name);};
+    my $source_table = shift;
+    my $target_table = shift;
+    return qq{remove_foreign_key '$source_table', '$target_table'};
 }
 
 sub generate_drop_table
@@ -154,14 +164,6 @@ sub generate_generic
 {
     my $migration_name = shift;
     generate_file('generic', $migration_name);
-}
-
-sub plural
-{
-    (my $table_name = shift) =~ s/_+/ /g;
-    $table_name = PL($table_name);
-    $table_name =~ s/\s+/_/g;
-    return $table_name;
 }
 
 sub getTimestamp

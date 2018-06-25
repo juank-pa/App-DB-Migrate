@@ -13,6 +13,7 @@ use Migrate::Generate;
 use Migrate::Status;
 use Migrate::Run;
 use Migrate::Rollback;
+use Migrate::Informix::Handler;
 
 use List::Util qw(max);
 use Module::Load;
@@ -83,9 +84,14 @@ sub run_migration (_)
     no strict 'refs';
     load $migration->{path};
 
-    "$migration->{package}::$function"->(bless {}, 'Dbh');
+    my $handler = Migrate::Handler::get_handler;
+    "$migration->{package}::$function"->($handler);
 
     my $dbh = Dbh::getDBH();
+    $dbh->begin_work;
+
+    my @sql = @{$handler->{sql}};
+    $dbh->do($_->[0], undef, @{$_->[1]}) foreach @sql;
 
     if ($function eq 'up') {
         $dbh->do("INSERT INTO _migrations (migration_id) VALUES ('$migration->{id}')");
@@ -93,6 +99,9 @@ sub run_migration (_)
     else {
         $dbh->do("DELETE FROM _migrations WHERE migration_id = '$migration->{id}'");
     }
+    print($@->errstr) if $@;
+
+    $dbh->commit if !$@;
 }
 
 sub pushBackOptions
