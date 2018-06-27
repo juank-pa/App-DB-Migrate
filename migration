@@ -4,12 +4,11 @@ use strict;
 
 my $script_dir;
 BEGIN { ($script_dir = $0) =~ s/\/migration$//; }
-use lib ($script_dir);
+use lib ("$script_dir/lib");
 
 use Log;
 use Migrate::Common;
 use Migrate::Help;
-use DBI;
 
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 our $VERSION = '0.0.1';
