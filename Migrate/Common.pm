@@ -1,30 +1,32 @@
 package Migrate::Common;
 
+our $script_dir;
+
 use strict;
 use warnings;
 use feature 'say';
 
 use Log;
 use Dbh;
-use File::Path qw(make_path);
 use Getopt::Std;
 
 use Migrate::Generate;
 use Migrate::Status;
 use Migrate::Run;
 use Migrate::Rollback;
+use Migrate::Setup;
 use Migrate::Informix::Handler;
 
 use List::Util qw(max);
 use Module::Load;
 
 our $action;
-use constant ACTIONS => qw{generate status run rollback};
 use constant ACTION_OPTIONS => {
     generate => 'tr:c:n:',
     status => 'f',
     run => '',
     rollback => '',
+    setup => '',
 };
 
 use feature "switch";
@@ -33,6 +35,7 @@ sub run_migration (_);
 
 sub execute
 {
+    $script_dir = shift;
     $action = shift @ARGV;
 
     checkEmptyAction();
@@ -42,6 +45,8 @@ sub execute
 
     my %options;
     return unless getopts(&actionOptions, \%options);
+
+    checkSetup($action);
 
     my $execute_sub = \&{"Migrate::\u${action}::execute"};
     $execute_sub->(\%options);
@@ -91,6 +96,8 @@ sub run_migration (_)
     $dbh->begin_work;
 
     my @sql = @{$handler->{sql}};
+    say($_->[0], "@{$_->[1]}") foreach @sql;
+    return;
     $dbh->do($_->[0], undef, @{$_->[1]}) foreach @sql;
 
     if ($function eq 'up') {
@@ -106,13 +113,16 @@ sub run_migration (_)
 
 sub pushBackOptions
 {
-    if ($action =~ qr/^-/) {
+    if (isOption($action)) {
         undef $action;
         push(@ARGV, $action);
     }
 }
 
+sub isOption { shift =~ qr/^_/ }
+
 sub actionOptions { $action && ACTION_OPTIONS->{$action} // '' }
+sub actions { keys ACTION_OPTIONS }
 
 sub checkEmptyAction
 {
@@ -124,49 +134,19 @@ sub checkEmptyAction
 
 sub checkValidAction
 {
-    my $actions = join('|', ACTIONS);
-    unless ($action =~ qr/$actions/ || $action =~ qr/^-/) {
-        Log::warn("Invalid action: $action");
+    my $actions = join('|', &actions);
+    unless ($action =~ qr/$actions/ || isOption($action)) {
+        say("Invalid action: $action");
         exit 0;
     }
 }
 
-sub initMigrations
+sub checkSetup
 {
-    my $dbh = shift;
-    createMigrationsFolder();
-    if (migrationsTableExists($dbh)) { return; }
-    createMigrationsTableQuery($dbh);
-}
-
-sub createMigrationsFolder
-{
-    eval { make_path("./migrations") };
-    if ($@) {
-        Log::debug("Could not create migrations directory!");
+    if ($action ne 'setup' && ! Migrate::Setup::isSetup) {
+        say('Migrations are not yet setup. Run: migrate setup');
+        exit(0);
     }
-}
-
-sub createMigrationsTableQuery
-{
-    my $dbh = shift;
-    my @sql = (<<CREATE, <<INDEX, <<PK);
-CREATE TABLE "$Dbh::DBSchema"._migrations (
-    migration_id varchar(128)
-);
-CREATE
-CREATE UNIQUE INDEX "$Dbh::DBSchema".xu1_migrations_migration_id on _migrations (migration_id);
-INDEX
-ALTER TABLE "$Dbh::DbSchema"._migrations add constraint primary key (migration_id) constraint "$Dbh::DbSchema".pk_migrations;
-PK
-    Dbh::doSQL($_, {}, $dbh) foreach @sql;
-}
-
-sub migrationsTableExists
-{
-    my $dbh = shift;
-    my $fields = { tabname => '_migrations' };
-    Dbh::runSQL(Dbh::query('systables', $fields), $fields, $dbh);
 }
 
 return 1;

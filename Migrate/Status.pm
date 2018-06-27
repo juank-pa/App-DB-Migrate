@@ -17,7 +17,7 @@ sub execute
 sub query_migrations
 {
     my $query = <<EOF;
-SELECT * FROM "$Dbh::DBSchema"._migrations ORDER BY migration_id;
+SELECT * FROM ${Dbh::DBSchema}_migrations ORDER BY migration_id;
 EOF
     my $dbh = Dbh::getDBH();
     return Dbh::runSQL($query, undef, $dbh);
@@ -27,6 +27,7 @@ sub print_migrations
 {
     my $filenames = shift // 0;
     my @migrations = get_migrations();
+    return say('There are not any generated migrations yet') unless scalar(@migrations);
     print_migration($filenames) foreach @migrations;
 }
 
@@ -74,7 +75,7 @@ sub get_migration_data
     return {
         id => $migration_id,
         package => "_$migration_id",
-        path => "migrations/$migration_id.pl",
+        path => "./db/migrations/$migration_id.pl",
         status => $status
     };
 }
@@ -91,7 +92,7 @@ sub migration_description
 
 sub get_migration_files
 {
-    my $directory = './migrations';
+    my $directory = './db/migrations';
     opendir (DIR, $directory) or die 'There is no migrations folder';
     my @files = sort(readdir DIR);
     close DIR;

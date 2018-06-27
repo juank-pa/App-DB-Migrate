@@ -28,11 +28,7 @@ sub generate_help
 {
     my $fh = shift;
     print($fh <<EOF);
-The following options are accepted:
-    -n         The name of the migration (allowed characters [_A-Za-z0-9])
-
------
-NOTES
+    -n [name]  The name of the migration (allowed characters [_A-Za-z0-9])
 EOF
 }
 
@@ -53,7 +49,7 @@ sub global_help
     my $fh = shift;
     my $action = $Migrate::Common::action;
     my $printed_action = $action || 'ACTION';
-    my $actions = $action || join('|', Migrate::Common::ACTIONS);
+    my $actions = $action || join('|', &Migrate::Common::actions);
 
     print($fh <<EOF);
 Usage: migrate.pl $printed_action [-OPTIONS]

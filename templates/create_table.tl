@@ -13,3 +13,5 @@ sub down
     my $mh = shift;
     $mh->drop_table('{DBTABLENAME}');
 }
+
+return 1;

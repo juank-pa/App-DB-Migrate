@@ -5,18 +5,18 @@ use warnings;
 
 use feature 'switch';
 
+use Migrate::Common;
+
 sub execute
 {
     my $options = shift;
     my $name = $options->{n} // die('Generate requires a migration name');
 
-    given($name) {
-        when ($name =~ s/^create_table_// > 0) { generate_create_table($name, $options) }
-        when ($name =~ s/^drop_table_// > 0) { generate_drop_table($name) }
-        when ($name =~ s/^add_column_// > 0) { generate_add_column($name) }
-        when ($name =~ s/^drop_column_// > 0) { generate_add_column($name) }
-        default { generate_generic($name) }
-    }
+    if    ($name =~ /^create_table_(.*)/) { generate_create_table($1, $options) }
+    elsif ($name =~ /^drop_table_(.*)/) { generate_drop_table($1) }
+    elsif ($name =~ /^add_column_(.*)/) { generate_add_column($1) }
+    elsif ($name =~ /^drop_column_(.*)/) { generate_add_column($1) }
+    else { generate_generic($name) }
 }
 
 sub generate_file
@@ -25,10 +25,10 @@ sub generate_file
 
     my $package_subject = $action eq 'generic'? $subject : "${action}_$subject";
     my $package_name = getTimestamp()."_${package_subject}";
-    my $target_filename = "migrations/$package_name.pl";
+    my $target_filename = "db/migrations/$package_name.pl";
     my %replace = get_replacements($package_name, $table_name, $data);
 
-    open(my $src, '<', "$ENV{HOME}/perl/templates/$action.tl");
+    open(my $src, '<', "$Migrate::Common::script_dir/templates/$action.tl");
     open(my $tgt, '>', $target_filename);
 
     while (my $line = <$src>) {
@@ -101,9 +101,9 @@ sub parse_column
     my @options;
 
     foreach(@column_data) {
-        when ('not_null') { push @options, 'null => 0' }
-        when (/^(?:null|index|unique)$/) { push @options, "$_ => 1" }
-        when (/^(string|char|text|integer|float|decimal|date|datetime)(?:\((\d+(?:,\d+)*)\))?$/) {
+        if ($_ eq 'not_null') { push @options, 'null => 0' }
+        elsif (/^(?:null|index|unique)$/) { push @options, "$_ => 1" }
+        elsif (/^(string|char|text|integer|float|decimal|date|datetime)(?:\((\d+(?:,\d+)*)\))?$/) {
             $column_type = $1;
             if ($2) {
                 my @attrs = split(',', $2);
@@ -114,8 +114,8 @@ sub parse_column
     }
 
     my $options = @options? ', { '.join(', ', @options).' }' : '';
-    return $is_ref? qq[references '$column_name'] :
-                    qq[$column_type '$column_name'$options];
+    return $is_ref? qq[references('$column_name')] :
+                    qq[$column_type('$column_name'$options)];
 }
 
 sub parse_foreign_keys

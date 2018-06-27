@@ -3,7 +3,7 @@
 use strict;
 
 my $script_dir;
-BEGIN { ($script_dir = $0) =~ s/\/migrate//; }
+BEGIN { ($script_dir = $0) =~ s/\/migration$//; }
 use lib ($script_dir);
 
 use Log;
@@ -18,10 +18,7 @@ main();
 
 sub main
 {
-    my $dbh = Dbh::getDBH();
-    Migrate::Common::initMigrations($dbh);
-
-    Migrate::Common::execute();
+    Migrate::Common::execute($script_dir);
 }
 
 sub HELP_MESSAGE

@@ -15,3 +15,5 @@ sub down
 -- DOWN SQL HERE
 EOF
 }
+
+return 1;

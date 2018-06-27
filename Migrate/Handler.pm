@@ -6,17 +6,25 @@ use warnings;
 use Lingua::EN::Inflect qw{PL};
 use Dbh;
 use DBI;
+use Migrate::SQLite::Handler;
 
 use feature 'switch';
 
-sub get_handler
+our $driver;
+
+sub get_handler { handler_subclass()->new }
+
+sub driver
 {
-    my $dsn = $Dbh::DBDataSource;
-    my (undef, $driver) = DBI->parse_dsn($dsn);
-    return "Migrate::${driver}::Handler"->new;
+    (undef, $driver) = DBI->parse_dsn($Dbh::DBDataSource) if !defined($driver);
+    return $driver;
 }
 
+sub handler_subclass { my $driver = &driver; "Migrate::${driver}::Handler" }
+
 sub new { return bless { sql => [] }, shift }
+
+sub create_migrations_table_query { no strict 'refs'; handler_subclass()->create_migrations_table_query }
 
 sub push_sql
 {
@@ -30,17 +38,17 @@ sub create_table
     my $sub = shift;
     (my $class = ref($self) || $self) =~ s/Handler/Table/;
     my $table = $class->new($self);
-    my $plural_name = plural($name);
+    my $plural_name = $self->plural($name);
     my $field_name = "${name}_id";
 
     # Add primary key
-    $table->add_column($field_name, $self->pk_datatype, { null => 0, unique => 1 });
+    $table->add_column($field_name, $self->pk_datatype, { index => $self->create_index_for_pk, null => 0 });
 
     $sub->($table);
 
     # create table sql
     my @columns = map { $_->{str} } @{$table->{columns}};
-    $self->push_sql(qq{CREATE TABLE "$Dbh::DBSchema".$plural_name(}.join(',', @columns).')', @{$table->{defaults}});
+    $self->push_sql(qq{CREATE TABLE $Dbh::DBSchema$plural_name(}.join(',', @columns).')', @{$table->{defaults}});
 
     # create indices
     my @indices = grep { $_->{unique} || $_->{index} } @{$table->{columns}};
@@ -50,55 +58,36 @@ sub create_table
     $self->add_primary_key($plural_name, $field_name);
 }
 
+sub do { shift->push_sql(@_) }
+
+sub plural
+{
+    my $self = shift;
+    (my $table_name = shift) =~ s/_+/ /g;
+    $table_name = PL($table_name);
+    $table_name =~ s/\s+/_/g;
+    return $table_name;
+}
+
+sub unique
+{
+    my ($self, $unique) = (shift, shift);
+    return $unique? 'UNIQUE ' : '';
+}
+
 sub drop_table
 {
     my ($self, $name) = (shift, shift);
-    my $plural_name = plural($name);
-    $self->push_sql("DROP TABLE $plural_name");
-}
-
-sub add_primary_key
-{
-    my $self = shift;
-    my $table_name = shift;
-    my $field_name = shift;
-    $self->push_sql(qq{ALTER TABLE "$Dbh::DBSchema".$table_name ADD CONSTRAINT PRIMARY KEY (${field_name}) CONSTRAINT "$Dbh::DBSchema".pk_$table_name});
-}
-
-sub create_index
-{
-    my $self = shift;
-    my $name = plural(shift);
-    my $column = shift;
-    my $unique = (shift)? 'UNIQUE ' : '';
-    $self->push_sql(qq{CREATE ${unique}INDEX \"$Dbh::DBSchema".idx_${name}_${column} ON $name (${column})});
+    my $plural_name = $self->plural($name);
+    $self->push_sql("DROP TABLE $Dbh::DBSchema$plural_name");
 }
 
 sub drop_index
 {
     my $self = shift;
-    my $name = plural(shift);
+    my $name = $self->plural(shift);
     my $column = shift;
-    $self->push_sql(qq{DROP INDEX \"$Dbh::DBSchema".idx_${name}_${column}});
-}
-
-sub add_foreign_key
-{
-    my ($self, $source, $target) = (shift, shift, shift);
-    my $source_table = plural($source);
-    my $target_table = plural($target);
-    my $field_name = "${target}_id";
-    $self->push_sql(qq{ALTER TABLE "$Dbh::DBSchema".$source_table ADD CONSTRAINT (FOREIGN KEY ($field_name) REFERENCES $target_table($field_name) CONSTRAINT "$Dbh::DBSchema".fk_${source_table}_$field_name)});
-}
-
-sub do { shift->push_sql(@_) }
-
-sub plural
-{
-    (my $table_name = shift) =~ s/_+/ /g;
-    $table_name = PL($table_name);
-    $table_name =~ s/\s+/_/g;
-    return $table_name;
+    $self->push_sql("DROP INDEX ${Dbh::DBSchema}idx_${name}_${column}");
 }
 
 sub build_datatype
@@ -114,12 +103,5 @@ sub build_datatype_attrs
     my ($m, $d) = (shift, shift);
     defined $m? '('.join(',', grep { defined $_ } ($m, $d)).')' : ''
 }
-
-sub null {}
-
-sub date {
-}
-
-sub not_null { 'NOT NULL'; }
 
 return 1;

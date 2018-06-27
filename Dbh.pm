@@ -9,7 +9,8 @@ use DBI;
 our $_DBH;
 our $_DBHLockMode = 'wait';
 
-our $DBSchema = $ENV{MS_SCHEMA};
+#our $DBSchema = $ENV{MS_SCHEMA}? qq{"$ENV{MS_SCHEMA}".} : '';
+our $DBSchema = '';
 our $DBUserName = $ENV{MS_USER} // $ENV{DBI_USER};
 our $DBPassword = $ENV{MS_PASS} // $ENV{DBI_PASS};
 our $DBDataSource = $ENV{MS_DSN} // $ENV{DBI_DSN};
@@ -117,17 +118,6 @@ sub _getDBHWithRetries
     # If we have still failed to connect to the db, well, that's pretty bad.
     if(!$dbh || !ref($dbh)) {
         Log::error_die("Could not connect to database ($datasource)");
-    }
-
-    if(!$found_cached) {
-        eval {
-            $dbh->do("set lock mode to " . $_DBHLockMode);
-            $dbh->{$lock_attr} = $_DBHLockMode;
-        };
-        if($@) {
-            my $err = $DBI::errstr;
-            Log::warn("Could not set lock mode to wait: " . $err);
-        }
     }
 
     $_DBH = $dbh;
