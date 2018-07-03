@@ -1,17 +1,11 @@
-package _{PACKAGE_NAME};
-
-sub up
-{
-    my $mh = shift;
+sub up {
+    my ($mh, $dbh) = @_;
     $mh->create_table('{DBTABLENAME}', sub {
         my $th = shift;
 {DBADDCOLUMNS}    });
 {DBADDREFERENCES}}
 
-sub down
-{
-    my $mh = shift;
+sub down {
+    my ($mh, $dbh) = @_;
     $mh->drop_table('{DBTABLENAME}');
 }
-
-return 1;
