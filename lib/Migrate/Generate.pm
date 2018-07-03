@@ -128,13 +128,12 @@ sub _parse_column_opts {
 
     my $column_name = shift(@column_data) // die('Column name is required');
     my $options = { name => $column_name };
+    my $datatype_regex = qr/^(string|char|text|integer|float|decimal|date|datetime)(\d+(?:,\d+)*)?$/;
 
     foreach(@column_data) {
         if ($_ eq 'not_null') { $options->{null} = 0 }
         elsif (/^(?:index|unique)$/) { $options->{$_} = 1 }
-        elsif (/^(string|char|text|integer|float|decimal|date|datetime)(\d+(?:,\d+)*)?$/) {
-            _parse_column_datatype($options, $1, $2);
-        }
+        elsif (/$datatype_regex/) { _parse_column_datatype($options, $1, $2) }
     }
 
     return $options;
