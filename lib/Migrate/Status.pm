@@ -4,43 +4,40 @@ use strict;
 use warnings;
 
 use feature 'say';
-use Dbh;
+use Migrate::Dbh qw(get_dbh);
+use Migrate::Handler;
+use Migrate::Config;
 
 sub print_migration ($_);
 
-sub execute
-{
+sub execute {
     my $options = shift;
+    Migrate::Setup::setup_migrations_table();
     print_migrations(exists $options->{f});
 }
 
-sub query_migrations
-{
-    my $query = <<EOF;
-SELECT * FROM ${Dbh::DBSchema}_migrations ORDER BY migration_id;
-EOF
-    my $dbh = Dbh::getDBH();
-    return Dbh::runSQL($query, undef, $dbh);
+sub query_migrations {
+    my $schema = Migrate::Config::config->{schema} // '';
+    my $query = Migrate::Handler::select_migrations_query;
+    my $dbh = get_dbh();
+    return @{$dbh->selectall_arrayref($query)};
 }
 
-sub print_migrations
-{
+sub print_migrations {
     my $filenames = shift // 0;
     my @migrations = get_migrations();
     return say('There are not any generated migrations yet') unless scalar(@migrations);
     print_migration($filenames) foreach @migrations;
 }
 
-sub print_migration ($_)
-{
+sub print_migration ($_) {
     my $filenames = shift // 0;
     my $migration = shift;
     my $description = $filenames? $migration->{path} : migration_description($migration);
     printf("%-7s%s\n", "[$migration->{status}]", $description);
 }
 
-sub get_migrations
-{
+sub get_migrations {
     my $index = 0;
     my @files = get_migration_files();
     my @migrations = map { $_->{migration_id} } (query_migrations);
@@ -68,8 +65,7 @@ sub get_migrations
     return @results;
 }
 
-sub get_migration_data
-{
+sub get_migration_data {
     my $migration_id = shift;
     my $status = shift;
     return {
@@ -80,8 +76,7 @@ sub get_migration_data
     };
 }
 
-sub migration_description
-{
+sub migration_description {
     my $migration = shift or return '';
     my $id = $migration->{id};
     my @parts = split('_', $id);
@@ -90,8 +85,7 @@ sub migration_description
     return "$timestamp \u$description";
 }
 
-sub get_migration_files
-{
+sub get_migration_files {
     my $directory = './db/migrations';
     opendir (DIR, $directory) or die 'There is no migrations folder';
     my @files = sort(readdir DIR);

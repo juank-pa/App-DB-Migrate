@@ -1,5 +1,10 @@
 package Migrate::SQLite::Handler;
 
+use strict;
+use warnings;
+
+use List::Util qw(first);
+
 use Migrate::SQLite::Table;
 
 our @ISA = qw(Migrate::Handler);
@@ -34,50 +39,51 @@ sub default { 'DEFAULT' }
 
 sub current_timestamp { 'CURRENT_TIMESTAMP' }
 
-sub quotation { '"' }
+sub quoted_types { qw{VARCHAR CHARACTER TEXT DATE DATETIME} }
+
+sub should_quote {
+    my ($self, $datatype) = (shift, shift);
+    foreach ($self->quoted_types) {
+        if ($_ eq $datatype) { return 1; }
+    }
+    return 0;
+}
+
+sub quote {
+    my ($self, $value) = (shift, shift);
+    my $datatype = shift // $self->default_datatype;
+    return Dbh->getDBH()->quote($value) if $self->should_quote($datatype);
+    return $value;
+}
 
 sub create_index_for_pk { 0 }
 
-sub add_primary_key
-{
-    my $self = shift;
-    my $table_name = shift;
-    my $field_name = shift;
-    $self->push_sql(qq{ALTER TABLE $table_name ADD COLUMN $field_name CONSTRAINT ${Dbh::DBSchema}pk_$table_name PRIMARY KEY AUTOINCREMENT});
-}
+sub add_primary_key { }
 
-sub create_index
-{
+sub create_index {
     my $self = shift;
     my $table_name = $self->plural(shift);
     my $column = shift;
     my $unique = $self->unique(shift);
-    $self->push_sql(qq{CREATE ${unique}INDEX ${Dbh::DBSchema}idx_${name}_${column} ON $table_name($column)});
+    $self->push_sql(qq{CREATE ${unique}INDEX ${Dbh::DBSchema}idx_${table_name}_${column} ON $table_name($column)});
 }
 
-sub add_foreign_key
-{
+sub add_foreign_key {
     my ($self, $source, $target) = (shift, shift, shift);
     my $source_table = $self->plural($source);
     my $target_table = $self->plural($target);
     my $field_name = "${target}_id";
     $self->push_sql(qq{ALTER TABLE ${Dbh::DBSchema}$source_table ADD COLUMN $field_name CONSTRAINT fk_${source_table}_$field_name REFERENCES $target_table($field_name)});
 }
-sub escape
-{
+
+sub escape {
     my ($self, $text) = (shift, shift);
     my $quotation = $self->quotation;
     $text =~ s/(\'|\"|\\)/\\$1/g;
     return $text;
 }
 
-sub create_migrations_table_query
-{
-    (qq{
-        CREATE TABLE IF NOT EXISTS _migrations (
-            migration_id VARCHAR(128) NOT NULL PRIMARY KEY
-        );
-    });
-}
+sub create_migrations_table_query { 'CREATE TABLE IF NOT EXISTS _migrations (migration_id VARCHAR(128) NOT NULL PRIMARY KEY)' }
+sub select_migrations_query { 'SELECT * FROM _migrations ORDER BY migration_id' };
 
 return 1;

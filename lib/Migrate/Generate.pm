@@ -4,8 +4,9 @@ use strict;
 use warnings;
 
 use feature 'switch';
+use feature 'say';
 
-use Migrate::Common;
+use Migrate;
 
 sub execute
 {
@@ -37,7 +38,7 @@ sub generate_file
     }
 
     close($src); close($tgt);
-    Log::debug("Created file: $target_filename");
+    say("Created file: $target_filename");
 }
 
 sub get_replacements

@@ -38,16 +38,14 @@ sub quotation { '"' }
 
 sub create_index_for_pk { 0 }
 
-sub add_primary_key
-{
+sub add_primary_key {
     my $self = shift;
     my $table_name = shift;
     my $field_name = shift;
     $self->push_sql(qq{ALTER TABLE $Dbh::DBSchema$table_name ADD PRIMARY KEY (${field_name}) CONSTRAINT ${Dbh::DBSchema}pk_$table_name});
 }
 
-sub create_index
-{
+sub create_index {
     my $self = shift;
     my $name = $self->plural(shift);
     my $column = shift;
@@ -55,8 +53,7 @@ sub create_index
     $self->push_sql(qq{CREATE ${unique}INDEX ${Dbh::DBSchema}idx_${name}_${column} ON $name (${column})});
 }
 
-sub add_foreign_key
-{
+sub add_foreign_key {
     my ($self, $source, $target) = (shift, shift, shift);
     my $source_table = $self->plural($source);
     my $target_table = $self->plural($target);
@@ -64,16 +61,14 @@ sub add_foreign_key
     $self->push_sql(qq{ALTER TABLE {$Dbh::DBSchema}$source_table ADD CONSTRAINT (FOREIGN KEY ($field_name) REFERENCES $target_table($field_name) CONSTRAINT "$Dbh::DBSchema".fk_${source_table}_$field_name)});
 }
 
-sub escape
-{
+sub escape {
     my ($self, $text) = (shift, shift);
     my $quotation = $self->quotation;
     $text =~ s/(\'|\"|\\)/\\$1/g;
     return $text;
 }
 
-sub create_migrations_table
-{
+sub create_migrations_table {
     return (<<CREATE, <<INDEX, <<PK);
 CREATE TABLE IF NOT EXISTS "$Dbh::DBSchema"._migrations (
     migration_id varchar(128)
