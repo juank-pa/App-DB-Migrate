@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use feature 'say';
 
-use Getopt::Std;
+use Getopt::Long qw{:config posix_default bundling auto_version};
 
 use Migrate::Generate;
 use Migrate::Status;
@@ -12,11 +12,11 @@ use Migrate::Run;
 use Migrate::Setup;
 
 use constant ACTION_OPTIONS => {
-    generate => 'tr:c:n:',
-    status => 'f',
-    run => '',
-    rollback => '',
-    setup => '',
+    generate => ['name|n:s', 'column|c:s@', 'ref\r:s@', 'tstamp|t'],
+    status => ['file|f'],
+    run => [],
+    rollback => [],
+    setup => [],
 };
 
 use constant ACTION_CODE => {
@@ -42,24 +42,38 @@ sub execute_action {
 sub check_action {
     my $action = shift;
 
-    check_empty_action($action);
+    check_help($action);
     check_valid_action($action);
     check_needs_setup($action);
 
-    return is_action_option($action)? '' : shift(@ARGV);
+    $action = is_action_option($action)? '' : shift(@ARGV);
+
+    # Check again for specific action help
+    check_help($ARGV[0], $action) if $action;
+
+    return $action
 }
 
-sub get_options { my %opts; return \%opts if getopts(&action_options(shift), \%opts); }
+sub get_options {
+    my $opts = {};
+    return $opts if GetOptions($opts, action_options(shift));
+}
 
 sub is_action_option { shift =~ qr/^-/ }
-sub is_valid_action { my $actions = join('|', &actions); shift =~ qr/$actions/ }
+sub is_valid_action { my $action = shift; grep(/^$action$/, &actions) }
 
-sub action_options { $_[0] && ACTION_OPTIONS->{$_[0]} // '' }
+sub action_options { @{ACTION_OPTIONS->{$_[0] // ''} // []} }
 sub actions { keys %{(ACTION_OPTIONS)} }
 
-sub check_empty_action {
-    if (!shift) {
-        Migrate::Help::execute();
+sub is_help_option { my $opt = shift; $opt && $opt =~ /^(?:--help|-h)$/ }
+
+sub show_general_help { my ($opt, $act) = @_; !$act && (!$opt || is_help_option $opt) }
+sub show_action_help { my ($opt, $act) = @_; $act && is_help_option $opt }
+
+sub check_help {
+    my (undef, $action) = @_;
+    if (show_general_help(@_) || show_action_help(@_)) {
+        Migrate::Help::execute($action);
         exit 0;
     }
 }
@@ -73,7 +87,8 @@ sub check_valid_action {
 }
 
 sub check_needs_setup {
-    if (shift ne 'setup' && !Migrate::Setup::is_migration_setup) {
+    my $action = shift;
+    if ($action ne 'setup' && !Migrate::Setup::is_migration_setup) {
         say('Migrations are not yet setup. Run: migrate setup');
         exit(0);
     }

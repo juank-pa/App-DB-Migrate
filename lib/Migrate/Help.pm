@@ -2,58 +2,39 @@ package Migrate::Help;
 
 use strict;
 use warnings;
-use Migrate;
+use feature 'say';
 
-sub execute { ::HELP_MESSAGE(*STDOUT); }
+use Migrate::Config;
+use Pod::Usage;
+use Pod::Find qw(pod_where pod_find);
 
-sub show {
-    my $fh = shift;
-    my $action = $Migrate::action;
-
-    global_help($fh);
-
-    return unless $action;
-
-    my $action_sub = \&{$action.'_help'};
-    $action_sub->($fh);
-}
-
-sub generate_help {
-    my $fh = shift;
-    print($fh <<EOF);
-    -n [name]  The name of the migration (allowed characters [_A-Za-z0-9])
-EOF
-}
-
-sub status_help {
-}
-
-sub run_help {
-}
-
-sub rollback_help {
-}
-
-sub global_help {
-    my $fh = shift;
-    my $action = $Migrate::action;
-    my $printed_action = $action || 'ACTION';
-    my $actions = $action || join('|', &Migrate::actions);
-
-    print($fh <<EOF);
-Usage: migrate.pl $printed_action [-OPTIONS]
-
-EOF
-    print($fh <<EOF) unless $action;
-ACTION: ($actions)
-
-EOF
-
-    print($fh <<EOF);
-The following options are accepted:
-    --help     Prints the help for every particular action
-    --version  Prints the version
-EOF
+sub execute {
+    my $pod = pod_where({ -inc => 1 }, __PACKAGE__);
+    pod2usage({
+        -input => $pod
+    });
 }
 
 return 1;
+
+__END__
+
+=head1 NAME
+
+migrate
+
+=head1 SYNOPSIS
+
+migrate.pl [action] [options]
+
+ Action: (setup|status|generate|run|rollback)
+
+ Boolean options:
+  -h, --help     Prints the help for every particular action
+      --version  Prints the version
+
+=head1 DESCRIPTION
+
+To be writen.
+
+=cut

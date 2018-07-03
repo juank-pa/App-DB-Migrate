@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!perl -w
 
 use strict;
 
@@ -11,12 +11,8 @@ use feature 'say';
 use Migrate;
 use Migrate::Help;
 
-$Getopt::Std::STANDARD_HELP_VERSION = 1;
 our $VERSION = '0.001';
 
 main();
 
 sub main { Migrate::execute() }
-
-sub HELP_MESSAGE { Migrate::Help::show(shift) }
-sub VERSION_MESSAGE { my $fh = shift; say($fh "Migrate v$VERSION\n") }
