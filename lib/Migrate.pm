@@ -22,8 +22,8 @@ use constant ACTION_OPTIONS => {
 use constant ACTION_CODE => {
     generate => \&Migrate::Generate::execute,
     status => \&Migrate::Status::execute,
-    run => \&Migrate::Run::execute_up,
-    rollback => \&Migrate::Run::execute_down,
+    run => \&Migrate::Run::run,
+    rollback => \&Migrate::Run::rollback,
     setup => \&Migrate::Setup::execute,
 };
 

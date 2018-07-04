@@ -11,9 +11,16 @@ use DBI;
 use feature 'switch';
 
 our $driver;
+our $instance;
 
-sub get_handler { handler_subclass()->new }
-sub new { return bless { sql => [] }, shift }
+sub get_handler { handler_subclass()->_new }
+sub _new { bless { sql => [] }, shift }
+
+sub singleton {
+    my $self = shift;
+    $instance = $self->get_handler if !$instance;
+    return $instance;
+}
 
 sub driver {
     my $config = Migrate::Config::config();
@@ -24,8 +31,10 @@ sub driver {
 sub handler_subclass { 'Migrate::'.driver().'::Handler' }
 sub run_as_subclass { no strict 'refs'; &{handler_subclass().'::'.shift(@_)}() }
 
-sub create_migrations_table_query { run_as_subclass('create_migrations_table_query') }
-sub select_migrations_query { run_as_subclass('select_migrations_query') }
+sub create_migrations_table_sql { shift->singleton->create_migrations_table_sql }
+sub select_migrations_sql { shift->singleton->select_migrations_sql }
+sub insert_migration_sql { shift->singleton->insert_migration_sql }
+sub delete_migration_sql { shift->singleton->delete_migration_sql }
 
 sub push_sql { push @{$_[0]->{sql}}, $_[1] }
 
@@ -45,7 +54,7 @@ sub create_table {
 
     # create table sql
     my @columns = map { $_->{str} } @{$table->{columns}};
-    $self->push_sql(qq{CREATE TABLE $Dbh::DBSchema$plural_name(}.join(',', @columns).')', @{$table->{defaults}});
+    $self->push_sql(qq{CREATE TABLE $plural_name(}.join(',', @columns).')', @{$table->{defaults}});
 
     # create indices
     my @indices = grep { $_->{unique} || $_->{index} } @{$table->{columns}};

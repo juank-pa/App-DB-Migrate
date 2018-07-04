@@ -18,7 +18,7 @@ sub execute {
 
 sub query_migrations {
     my $schema = Migrate::Config::config->{schema} // '';
-    my $query = Migrate::Handler::select_migrations_query;
+    my $query = Migrate::Handler->select_migrations_sql;
     my $dbh = get_dbh();
     return @{$dbh->selectall_arrayref($query)};
 }

@@ -101,7 +101,7 @@ sub setup {
 }
 
 sub setup_migrations_table {
-    get_dbh()->do(Migrate::Handler->create_migrations_table_query);
+    get_dbh()->do(Migrate::Handler->create_migrations_table_sql);
 }
 
 return 1;

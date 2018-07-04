@@ -83,10 +83,10 @@ sub _generate_create_table_from_opts {
 # File generator
 
 sub _generate_file {
-    my ($action, $subject, $table_name, $data) = (shift, shift, shift, shift);
+    my ($action, $subject, $table_name, $data) = @_;
 
-    my $package_subject = $action eq 'generic'? $subject : "${action}_$subject";
-    my $package_name = _timestamp()."_${package_subject}";
+    my $migration_name = $action eq 'generic'? $subject : "${action}_$subject";
+    my $package_name = _timestamp()."_${migration_name}";
     my %replace = _get_replacements($table_name, $data);
 
     my $target_path = File::Spec->catfile('db', 'migrations', "$package_name.pl");
@@ -95,7 +95,7 @@ sub _generate_file {
     open(my $src, '<', $source_path);
     open(my $tgt, '>', $target_path);
 
-    while (my $line = <$src>) {
+    while (defined(my $line = <$src>)) {
         $line =~ s/\{$_\}/$replace{$_}/g foreach (keys %replace);
         print $tgt $line;
     }
@@ -123,7 +123,6 @@ sub _parse_columns_opts {
 
 sub _parse_column_opts {
     my $column_str = shift // return undef;
-
     my @column_data = split(':', $column_str);
 
     my $column_name = shift(@column_data) // die('Column name is required');

@@ -2,25 +2,29 @@ package Migrate::Run;
 
 use strict;
 use warnings;
+use feature 'say';
 
-use Migrate::Dbh;
+use Migrate::Dbh qw(get_dbh);
 use Migrate::Handler;
+use Data::Dumper;
 
-sub execute_up {
-    run_migrations('down', -1);
+sub run {
+    Migrate::Setup::setup_migrations_table();
+    _run_migrations('down', -1)
 }
 
-sub execute_down {
-    run_migrations('up', shift);
+sub rollback {
+    Migrate::Setup::setup_migrations_table();
+    _run_migrations('up', shift)
 }
 
-sub run_migrations {
+sub _run_migrations {
     my $filter = shift;
-    my @migrations = filtered_migrations($filter, @_);
-    run_migration() foreach @migrations;
+    my @migrations = _filtered_migrations($filter, @_);
+    _run_migration($_) foreach @migrations;
 }
 
-sub filtered_migrations {
+sub _filtered_migrations {
     my $filter = shift;
     my $steps = shift // 1;
 
@@ -31,33 +35,48 @@ sub filtered_migrations {
     return @migrations[0 .. $steps - 1];
 }
 
-sub run_migration {
+sub _run_migration {
     my $migration = shift;
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
-
-    no strict 'refs';
-    #load $migration->{path};
-
     my $handler = Migrate::Handler::get_handler();
-    "$migration->{package}::$function"->($handler);
 
-    my $dbh = Dbh::getDBH();
-    $dbh->begin_work;
+    _run_migration_function($migration->{path}, $function, $handler);
 
     my @sql = @{$handler->{sql}};
     say($_) foreach @sql;
     return;
+
+    my $dbh = get_dbh();
+    $dbh->begin_work;
+
     $dbh->do($_) foreach @sql;
+    _record_migration($function, $migration->{id}, $dbh);
+
+    return $dbh->commit unless $@;
+
+    die($@->errstr);
+    $dbh->rollback;
+}
+
+sub _run_migration_function {
+    my ($path, $function, $handler) = @_;
+    eval {
+        package Migrate::Migration;
+        no strict 'refs';
+        do($path);
+        "Migrate::Migration::$function"->($handler);
+    };
+}
+
+sub _record_migration {
+    my ($function, $id, $dbh) = @_;
 
     if ($function eq 'up') {
-        $dbh->do("INSERT INTO _migrations (migration_id) VALUES ('$migration->{id}')");
+        $dbh->prepare(Migrate::Handler->insert_migration_sql)->execute($id);
     }
     else {
-        $dbh->do("DELETE FROM _migrations WHERE migration_id = '$migration->{id}'");
+        $dbh->prepare(Migrate::Handler->delete_migration_sql)->execute($id);
     }
-    print($@->errstr) if $@;
-
-    $dbh->commit if !$@;
 }
 
 return 1;
