@@ -34,50 +34,33 @@ sub default { 'DEFAULT' }
 
 sub current_timestamp { 'CURRENT YEAR TO SECOND' }
 
-sub quotation { '"' }
+sub quoted_types { qw{string char text date datetime} }
 
 sub create_index_for_pk { 0 }
 
-sub add_primary_key {
-    my $self = shift;
-    my $table_name = shift;
-    my $field_name = shift;
-    $self->push_sql(qq{ALTER TABLE $Dbh::DBSchema$table_name ADD PRIMARY KEY (${field_name}) CONSTRAINT ${Dbh::DBSchema}pk_$table_name});
-}
+sub schema_prefix { '' }
 
 sub create_index {
     my $self = shift;
-    my $name = $self->plural(shift);
+    my $table_name = $self->plural(shift);
+    my $quoted_table_name = $self->table_name($table_name);
     my $column = shift;
     my $unique = $self->unique(shift);
-    $self->push_sql(qq{CREATE ${unique}INDEX ${Dbh::DBSchema}idx_${name}_${column} ON $name (${column})});
+    $self->push_sql(qq{CREATE ${unique}INDEX idx_${table_name}_${column} ON $quoted_table_name($column)});
 }
 
 sub add_foreign_key {
     my ($self, $source, $target) = (shift, shift, shift);
     my $source_table = $self->plural($source);
-    my $target_table = $self->plural($target);
+    my $quoted_source_table = $self->table_name($source_table);
+    my $target_table = $self->table_name($self->plural($target));
     my $field_name = "${target}_id";
-    $self->push_sql(qq{ALTER TABLE {$Dbh::DBSchema}$source_table ADD CONSTRAINT (FOREIGN KEY ($field_name) REFERENCES $target_table($field_name) CONSTRAINT "$Dbh::DBSchema".fk_${source_table}_$field_name)});
+    $self->push_sql(qq{ALTER TABLE $quoted_source_table ADD CONSTRAINT (FOREIGN KEY ($field_name) REFERENCES $target_table($field_name) CONSTRAINT fk_${source_table}_$field_name)});
 }
 
-sub escape {
-    my ($self, $text) = (shift, shift);
-    my $quotation = $self->quotation;
-    $text =~ s/(\'|\"|\\)/\\$1/g;
-    return $text;
-}
-
-sub create_migrations_table {
-    return (<<CREATE, <<INDEX, <<PK);
-CREATE TABLE IF NOT EXISTS "$Dbh::DBSchema"._migrations (
-    migration_id varchar(128)
-);
-CREATE
-CREATE UNIQUE INDEX $Dbh::DBSchema.xu1_migrations_migration_id on _migrations (migration_id);
-INDEX
-ALTER TABLE $Dbh::DbSchema._migrations add constraint primary key (migration_id) constraint $Dbh::DbSchema.pk_migrations;
-PK
-}
+sub create_migrations_table_sql { 'CREATE TABLE IF NOT EXISTS '.shift->migrations_table_name.' (migration_id VARCHAR(128) PRIMARY KEY)' }
+sub select_migrations_sql { 'SELECT * FROM '.shift->migrations_table_name.' ORDER BY migration_id' };
+sub insert_migration_sql { 'INSERT INTO '.shift->migrations_table_name.' (migration_id) VALUES (?)' }
+sub delete_migration_sql { 'DELETE FROM '.shift->migrations_table_name.' WHERE migration_id = ?' }
 
 return 1;

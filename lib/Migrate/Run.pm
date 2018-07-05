@@ -42,6 +42,8 @@ sub _run_migration {
 
     _run_migration_function($migration->{path}, $function, $handler);
 
+    die($@) if $@;
+
     my @sql = @{$handler->{sql}};
     say($_) foreach @sql;
     return;
