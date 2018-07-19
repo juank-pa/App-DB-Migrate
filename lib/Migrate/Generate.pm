@@ -15,10 +15,10 @@ sub execute {
     my $path;
 
     for ($name) {
-        if (/^create_table_(.*)/) { $path = _generate_create_table_from_opts($1, $options) }
-        elsif (/^drop_table_(.*)/) { $path = generate_drop_table($1) }
-        elsif (/^add_column_(.*)/) { $path = generate_add_column($1) }
-        elsif (/^drop_column_(.*)/) { $path = generate_add_column($1) }
+        if (/^create_(.*)/) { $path = _generate_create_table_from_opts($1, $options) }
+        elsif (/^drop_(.*)/) { $path = generate_drop_table($1) }
+        elsif (/^add_(.*)/) { $path = generate_add_column($1) }
+        elsif (/^remove_(.*)/) { $path = generate_remove_column($1) }
         else { generate_generic($name) }
     }
 
@@ -40,24 +40,12 @@ sub generate_create_table {
         'DBADDREFERENCES' => _join_lines(1, '$mh->', @foreign_keys),
     };
 
-    _generate_file('create_table', $table_name, $table_name, $data);
+    _generate_file('create', $table_name, $table_name, $data);
 }
 
-sub generate_drop_table {
-    my $table_name = shift;
-    _generate_file('generic', "drop_table_$table_name");
-}
-
-sub generate_add_column {
-    my $migration_name = shift;
-    _generate_file('generic', "add_column_$migration_name");
-}
-
-sub generate_drop_column {
-    my $migration_name = shift;
-    _generate_file('generic', "drop_column_$migration_name");
-}
-
+sub generate_drop_table { _generate_file('generic', "drop_$_[0]") }
+sub generate_add_column { _generate_file('generic', "add_$_[0]"); }
+sub generate_remove_column { _generate_file('generic', "remove_$_[0]") }
 sub generate_generic { _generate_file('generic', shift) }
 
 sub _join_lines {
@@ -92,15 +80,14 @@ sub _generate_file {
     my $target_path = File::Spec->catfile('db', 'migrations', "$package_name.pl");
     my $source_path = File::Spec->catfile(Migrate::Config::library_root, 'templates', "$action.tl");
 
-    open(my $src, '<', $source_path);
-    open(my $tgt, '>', $target_path);
+    open(my $src, '<', $source_path) // die("Could not read template: $source_path\n");
+    open(my $tgt, '>', $target_path) // die("Could not create migration: $target_path\n");
 
     while (defined(my $line = <$src>)) {
         $line =~ s/\{$_\}/$replace{$_}/g foreach (keys %replace);
         print $tgt $line;
     }
 
-    close($src); close($tgt);
     return $target_path;
 }
 
@@ -131,7 +118,8 @@ sub _parse_column_opts {
 
     foreach(@column_data) {
         if ($_ eq 'not_null') { $options->{null} = 0 }
-        elsif (/^(?:index|unique)$/) { $options->{$_} = 1 }
+        elsif ($_ eq 'index') { $options->{index} = 1 }
+        elsif ($_ eq 'unique') { $options->{index} = { unique => 1 } }
         elsif (/$datatype_regex/) { _parse_column_datatype($options, $1, $2) }
     }
 
@@ -169,10 +157,10 @@ sub _serialize_column {
 
 sub _serialize_column_options {
     my $options = shift // {};
-    $Data::Dumper::Indent = 0;
-    $Data::Dumper::Quotekeys = 0;
-    $Data::Dumper::Terse = 1;
-    $Data::Dumper::Sortkeys = 1;
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Quotekeys = 0;
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Sortkeys = 1;
     return scalar keys %$options? ', '.Data::Dumper::Dumper($options) : '';
 }
 

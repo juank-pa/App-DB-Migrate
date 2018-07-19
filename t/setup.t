@@ -159,8 +159,7 @@ sub create_files { create_config(); create_config_sample() }
 sub file_contents {
     my $file = shift;
     open my $fh, '<', $file or die($!);
-    $/ = undef;
-    my $ret = <$fh>;
+    my $ret = do { local $/; <$fh> };
     close $fh;
     return $ret;
 }

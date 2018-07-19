@@ -16,13 +16,19 @@ use warnings;
 
 use File::Spec;
 
-my $config_hash = undef;
+my $config_hash;
+my $driver;
 
 sub library_root { $library_root || File::Spec->curdir }
 
 sub config {
     return $config_hash = $_[0] if scalar @_;
     $config_hash // reload_config();
+}
+
+sub driver {
+    $driver = (split(':', config->{dsn}))[1] if !$driver;
+    return $driver;
 }
 
 sub load_config {

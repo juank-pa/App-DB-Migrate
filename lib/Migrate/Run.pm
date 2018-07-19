@@ -5,7 +5,7 @@ use warnings;
 use feature 'say';
 
 use Migrate::Dbh qw(get_dbh);
-use Migrate::Handler;
+use Migrate::Factory qw(create);
 use Data::Dumper;
 
 sub run {
@@ -38,7 +38,7 @@ sub _filtered_migrations {
 sub _run_migration {
     my $migration = shift;
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
-    my $handler = Migrate::Handler::get_handler();
+    my $handler = create('handler');
 
     _run_migration_function($migration->{path}, $function, $handler);
 
@@ -74,10 +74,10 @@ sub _record_migration {
     my ($function, $id, $dbh) = @_;
 
     if ($function eq 'up') {
-        $dbh->prepare(Migrate::Handler->insert_migration_sql)->execute($id);
+        $dbh->prepare(class('migrations')->insert_migration_sql)->execute($id);
     }
     else {
-        $dbh->prepare(Migrate::Handler->delete_migration_sql)->execute($id);
+        $dbh->prepare(class('migrations')->delete_migration_sql)->execute($id);
     }
 }
 

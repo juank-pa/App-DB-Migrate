@@ -3,75 +3,88 @@ package Migrate::Table;
 use strict;
 use warnings;
 
-use Migrate::Handler;
+use Scalar::Util qw(looks_like_number);
+use Migrate::Factory qw(class create);
+use Migrate::Util;
 
-our $AUTOLOAD;
+use overload
+    fallback => 1,
+    '""' => sub { $_[0]->to_sql };
 
 sub new {
-    my $class = shift;
-    my $name = shift;
-    my $handler = shift;
-    return bless { handler => $handler, name => $name, columns => [] }, $class;
+    my ($class, $name, $options) = @_;
+    my $data = {
+        name => $name || die("Table name is needed\n"),
+        options => $options,
+        columns => []
+    };
+
+    my $table = bless($data, $class);
+    $table->primary_key($name, { column => $options->{primary_key}, type => $options->{id}, autoincrement => 1 })
+    if !exists($options->{id}) || $options->{id};
+    return $table;
 }
 
-sub name { shift(@_)->{name} }
+sub name { shift->{name} }
+sub options { shift->{options}{options} }
+sub is_temporary { shift->{options}{temporary} }
+sub columns { $_[0]->{columns} }
+sub temporary { }
+
+sub can {
+    my ($self, $method) = @_;
+    my $meth_ref = $self->SUPER::can($method);
+    return $meth_ref if $meth_ref;
+
+    return unless class('datatype')->is_valid_datatype($method);
+
+    $meth_ref = sub { splice(@_, 1, 0, $method); goto \&_shorthand_handler };
+    no strict 'refs';
+    return *{ $method } = $meth_ref;
+}
+
+sub _shorthand_handler {
+    my $self = shift;
+    my $datatype = shift;
+    my $options;
+    $options = pop if ref($_[-1]) eq 'HASH';
+    $self->column($_, $datatype, $options) for @_;
+}
 
 sub AUTOLOAD {
-    my ($self, $name, $options) = @_;
-    (my $datatype = $AUTOLOAD) =~ s/(.*::)+//;
-    $self->{handler}->is_valid_datatype($datatype) || die("Invalid function: $datatype\n");
-    $self->column($name, $datatype, $options);
+    my ($self, $name) = @_;
+    my ($method) = our $AUTOLOAD =~ /::(\w+)$/;
+    my $meth_ref = $self->can($method) // die("Invalid function: $method\n");
+    goto &$meth_ref;
 }
 
-sub column {
-    my $self = shift;
-    my $name = shift // die('Column name is needed');
-    my $datatype = shift // die('Data type is needed');
-    my $options = shift // {};
+# TODO: Add support polymorphic references
 
-    $self->{handler}->is_valid_datatype($datatype) || die("Invalid datatype: $datatype\n");
-
-    $options->{name} = $name;
-    $options->{str} = $self->_column_str($name, $datatype, $options);
-    push(@{$self->{columns}}, $options);
-}
-
-sub _column_str {
-    my $self = shift;
-    my $name = shift;
-    my $datatype = shift;
-    my $options = shift // {};
-
-    my $handler = $self->{handler};
-    my $native_datatype = $handler->build_datatype($datatype, $options->{limit}, $options->{precision}, $options->{scale});
-
-    my $null = $options->{null} || !defined($options->{null})? $handler->null : $handler->not_null;
-    my $current_datetime = exists($options->{default_datetime})? $handler->default.' '.$handler->current_timestamp : undef;
-    my $default = $handler->default.' '.$handler->quote($options->{default}, $datatype) if $options->{default};
-
-    return $self->_join_column_elems($name, $native_datatype, $null, $current_datetime // $default);
-}
-
-sub _pk_column { }
+sub column { shift->_push_column(create('column', @_)) }
+sub primary_key { shift->_push_column(create('Column::PrimaryKey', @_)) }
 
 sub timestamps {
     my $self = shift;
-    my $handler = $self->{handler};
-    $self->column('updated_at', 'datetime', { null => 0, default_datetime => 1 });
-    $self->column('created_at', 'datetime', { null => 0, default_datetime => 1 });
+    $self->_push_column(create('Column::Timestamp', "${_}_at", @_)) for qw(updated created);
 }
-
-sub _join_column_elems { shift; join ' ', grep { defined } @_; }
 
 sub references {
-    my $self = shift;
-    my $name = shift;
-    my $options = shift // {};
-    my $handler = $self->{handler};
-    my $target_table = $handler->plural($name);
-    $options->{name} = $name;
-    $options->{str} = $self->_column_str("${name}_id", 'integer', $options)." CONSTRAINT fk_$self->{name}_$name REFERENCES $target_table(${name}_id)";
-    push(@{$self->{columns}}, $options);
+    my ($self, $column, $options) = @_;
+    $self->_push_column(create('Column::References', $self->name, $column, $options));
 }
+
+sub to_sql {
+    my $self = shift;
+    my $columns = join(',', @{$self->{columns}});
+    my $name = Migrate::Util::identifier_name($self->name);
+    my $temporary = $self->is_temporary && $self->temporary;
+    return $self->_join_elems('CREATE', $temporary, 'TABLE', $name, "($columns)", $self->options);
+}
+
+sub _join_elems { shift; Migrate::Util::join_elems(@_) }
+
+sub _push_column { push(@{$_[0]->{columns}}, $_[1]) }
+
+DESTROY {}
 
 return 1;

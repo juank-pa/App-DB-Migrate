@@ -5,8 +5,9 @@ use warnings;
 
 use feature 'say';
 use Migrate::Dbh qw(get_dbh);
-use Migrate::Handler;
+use Migrate::Setup;
 use Migrate::Config;
+use Migrate::Factory qw(class);
 
 sub print_migration ($_);
 
@@ -18,7 +19,7 @@ sub execute {
 
 sub query_migrations {
     my $schema = Migrate::Config::config->{schema} // '';
-    my $query = Migrate::Handler->select_migrations_sql;
+    my $query = class('migrations')->select_migrations_sql;
     my $dbh = get_dbh();
     return @{$dbh->selectall_arrayref($query)};
 }

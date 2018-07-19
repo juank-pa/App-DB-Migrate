@@ -7,12 +7,15 @@ use feature 'say';
 our $script_dir;
 
 use Migrate::Config;
-use Migrate::Handler;
+use Migrate::Factory;
 use Migrate::Dbh qw(get_dbh);
+use Module::Load;
 
 use File::Path qw(make_path);
 use File::Copy qw(copy);
 use File::Spec;
+
+use Migrate::Factory qw(create class);
 
 my $db_path = 'db';
 my $migrations_path = File::Spec->catfile($db_path, 'migrations');
@@ -50,7 +53,6 @@ sub _push_file {
     my $files = shift;
     my $file = shift;
     my $success = shift;
-    $/ = "\n";
     chomp(my $error = shift);
     push(@$files, $error? "Could not create file:$file $error" : $file) if $success || $error;
     $@ = undef;
@@ -101,7 +103,7 @@ sub setup {
 }
 
 sub setup_migrations_table {
-    get_dbh()->do(Migrate::Handler->create_migrations_table_sql);
+    get_dbh()->do(class('migrations')->create_migrations_table_sql);
 }
 
 return 1;
