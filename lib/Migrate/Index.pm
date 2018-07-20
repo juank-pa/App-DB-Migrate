@@ -4,6 +4,9 @@ use overload
     fallback => 1,
     '""' => \&to_sql;
 
+# TODO:
+# * Revisit using (not supported everywhere, and position)
+
 sub new {
     my ($class, $table, $columns, $options) = @_;
     my $data = {
@@ -27,21 +30,22 @@ sub options { $_[0]->{options}->{options} }
 sub unique { 'UNIQUE' }
 sub asc { 'ASC' }
 sub desc { 'DESC' }
-sub using { 'USING' }
+#sub using { 'USING' }
 
 sub _column_list_name { join('_', @{$_[0]->columns}) }
 
 sub _column_order {
     my ($self, $column) = @_;
-    return '' unless $self->order && $self->order->{$column};
-    return (lc($self->order->{$column}) eq 'asc'? $self->asc : $self->desc);
+    my $order = ref($self->order) eq 'HASH'? $self->order : { $column => $self->order };
+    return '' unless $order->{$column};
+    return (lc($order->{$column}) eq 'asc'? $self->asc : $self->desc);
 }
 
 sub _column_length { '' }
 
 sub _column_sql {
     my ($self, $column) = @_;
-    return $self->_join_elements($column.$self->_column_length($column), $self->_column_order($column));
+    return $self->_join_elems($column.$self->_column_length($column), $self->_column_order($column));
 }
 
 sub _columns_sql {
@@ -58,10 +62,11 @@ sub to_sql {
     my $unique = $self->is_unique && $self->unique;
     my $name = Migrate::Util::identifier_name($self->name // 'idx_'.$table.'_'.$self->_column_list_name);
     my $columns = $self->_columns_sql();
-    my $using = $self->_using_sql;
-    return $self->_join_elements('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->options);
+    #my $using = $self->_using_sql;
+    my $using = undef;
+    return $self->_join_elems('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->options);
 }
 
-sub _join_elements { shift; join ' ', grep { $_ } @_; }
+sub _join_elems { shift; Migrate::Util::join_elems(@_) }
 
 return 1;

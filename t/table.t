@@ -62,7 +62,7 @@ subtest 'Table new creates a table with a primary key' => sub {
     my $th = Migrate::Table->new('my_table');
     is(scalar(@{$th->columns}), 1);
     is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', { column => undef, type => undef, autoincrement => 1 }]);
+    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', undef, { type => undef, autoincrement => 1 }]);
 };
 
 subtest 'Table new creates a table with a primary key and custom column' => sub {
@@ -70,7 +70,7 @@ subtest 'Table new creates a table with a primary key and custom column' => sub 
     my $th = Migrate::Table->new('my_table', { primary_key => 'my_id' });
     is(scalar(@{$th->columns}), 1);
     is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', { column => 'my_id', type => undef, autoincrement => 1 }]);
+    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', 'my_id', { type => undef, autoincrement => 1 }]);
 };
 
 subtest 'Table new creates a table with a primary key and custom datatype' => sub {
@@ -78,7 +78,7 @@ subtest 'Table new creates a table with a primary key and custom datatype' => su
     my $th = Migrate::Table->new('my_table', { id => 'string' });
     is(scalar(@{$th->columns}), 1);
     is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', { column => undef, type => 'string', autoincrement => 1 }]);
+    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', undef, { type => 'string', autoincrement => 1 }]);
 };
 
 subtest 'Table new creates a table without a primary key' => sub {

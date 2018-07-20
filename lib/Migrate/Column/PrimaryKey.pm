@@ -8,18 +8,19 @@ use Migrate::Factory qw(create class);
 use parent qw(Migrate::Column);
 
 sub new {
-    my ($class, $table, $options) = @_;
+    my ($class, $table, $column, $options) = @_;
+    ($column, $options) = (undef, $column) if ref($column) eq 'HASH';
     $options ||= {};
     my $datatype = class('datatype')->is_valid_datatype($options->{type})?
         $options->{type} : $class->default_datatype;
 
-    my $col = $class->SUPER::new($options->{column} || 'id', $datatype, $options);
+    my $col = $class->SUPER::new($column || 'id', $datatype, $options);
     $col->{table} = $table || die("Table name needed\n");
 
-    my $autoincrement = delete($options->{autoincrement});
+    my $autoincrement = $options->{autoincrement};
     my $pk_options = {};
     $pk_options->{autoincrement} = 1 if $autoincrement && !!grep(/^$datatype$/, $class->autoincrement_types);
-    $pk_options->{name} = delete($options->{constraint}) if $options->{constraint};
+    $pk_options->{name} = $options->{name} if $options->{name};
 
     $col->{pk} = create('Constraint::PrimaryKey', $col->table, $col->name, $pk_options);
     $col->add_constraint($col->{pk});

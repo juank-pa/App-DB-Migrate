@@ -47,14 +47,17 @@ subtest 'new passes datatype to factory' => sub {
 };
 
 subtest 'new passes options to factory' => sub {
-    my $col = Migrate::Column->new('column', 'my_datatype', {
+    my $options = {
         any => 'ANY',
         limit => 23,
         precision => 45,
         scale => 2,
-    });
-    is_deeply($params->{'datatype'}, ['datatype', 'my_datatype', {limit => 23, precision => 45, scale => 2}]);
-    is_deeply($col->options, { any => 'ANY' });
+    };
+    my $col = Migrate::Column->new('column', 'my_datatype', $options);
+
+    is_deeply($col->options, $options);
+    delete($options->{any});
+    is_deeply($params->{'datatype'}, ['datatype', 'my_datatype', $options]);
 };
 
 subtest 'new create null constraint if passed' => sub {

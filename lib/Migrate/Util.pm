@@ -5,11 +5,12 @@ use Migrate::Dbh qw{get_dbh};
 
 sub extract_keys {
     my $hash = shift;
-    my @keys = @_;
+    my @keys = @{ shift(@_) };
+    my $force_delete = shift;
     return if !defined $hash;
 
     my %ret = map { exists $hash->{$_}? ($_ => $hash->{$_}) : () } @keys;
-    delete $hash->{$_} for @keys;
+    if($force_delete) { delete $hash->{$_} for(@keys) }
     return \%ret;
 }
 
@@ -19,8 +20,6 @@ sub identifier_name {
     return get_dbh()->quote_identifier($config->{catalog}, $config->{schema}, $table_name);
 }
 
-sub join_elems {
-    join ' ', grep { $_ } @_;
-}
+sub join_elems { join ' ', grep { $_ } @_ }
 
 return 1;

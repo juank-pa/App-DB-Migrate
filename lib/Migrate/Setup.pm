@@ -29,8 +29,8 @@ my $target_config_sample_path = "$target_config_path.example";
 sub migrations_folder_exists ();
 
 # TODO:
-# 1. Add .gitignore for config files if inside a github repo.
-# 2. Add svn:ignore if we are in an svn repo.
+# * Add .gitignore for config files if inside a github repo.
+# * Add svn:ignore if we are in an svn repo.
 
 sub execute {
     if (is_migration_setup()) {

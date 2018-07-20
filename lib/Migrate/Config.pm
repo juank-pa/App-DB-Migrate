@@ -12,7 +12,7 @@ use strict;
 use warnings;
 
 # TODO:
-# 1. Support multiple environment settings (backward compatible)
+# * Support multiple environment settings (backward compatible)
 
 use File::Spec;
 

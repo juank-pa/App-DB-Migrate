@@ -74,17 +74,15 @@ subtest 'new passes foreign_key data to ForeignKey factory' => sub {
 };
 
 subtest 'new passes foreign_key data to ForeignKey factory overridding to_table' => sub {
-    my $ref = Migrate::Column::References->new('my_table', 'column', {
-        foreign_key => { to_table => 'new_table' },
-    });
-    is_deeply($params->{foreignkey}, ['Constraint::ForeignKey', 'my_table', 'new_table', {}]);
+    my $options = { foreign_key => { to_table => 'new_table' } };
+    my $ref = Migrate::Column::References->new('my_table', 'column', $options);
+    is_deeply($params->{foreignkey}, ['Constraint::ForeignKey', 'my_table', 'new_table', $options->{foreign_key}]);
 };
 
 subtest 'new passes foreign_key data to ForeignKey factory with data' => sub {
-    my $ref = Migrate::Column::References->new('old_table', 'column', {
-        foreign_key => { to_table => 'new_table', on_delete => 'cascade' },
-    });
-    is_deeply($params->{foreignkey}, ['Constraint::ForeignKey', 'old_table', 'new_table', { on_delete => 'cascade' }]);
+    my $options = { foreign_key => { to_table => 'new_table' } };
+    my $ref = Migrate::Column::References->new('old_table', 'column', $options);
+    is_deeply($params->{foreignkey}, ['Constraint::ForeignKey', 'old_table', 'new_table', $options->{foreign_key}]);
 };
 
 subtest 'table returns the reference table name' => sub {

@@ -60,7 +60,7 @@ sub to_sql {
 
 sub _build_datatype_attrs {
     my $self = shift;
-    my ($m, $d) = ($self->limit // $self->precision, $self->scale);
+    my ($m, $d) = ($self->precision // $self->limit, $self->scale);
     defined $m? '('.join(',', grep { defined $_ } ($m, $d)).')' : ''
 }
 

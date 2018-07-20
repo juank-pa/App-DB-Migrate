@@ -90,6 +90,14 @@ subtest 'to_sql returns a SQL representation of a unique index' => sub {
 };
 
 subtest 'to_sql returns a SQL representation of an ordered index' => sub {
+    my $idx = Migrate::Index->new('my_table', ['c1', 'c2', 'c3'], { order => 'asc' });
+    is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_c1_c2_c3 ON schema.my_table (c1 ASC,c2 ASC,c3 ASC)');
+
+    $idx = Migrate::Index->new('my_table', ['c1', 'c2'], { order => 'des' });
+    is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_c1_c2 ON schema.my_table (c1 DESC,c2 DESC)');
+};
+
+subtest 'to_sql returns a SQL representation of an ordered index per column' => sub {
     my $idx = Migrate::Index->new('my_table', ['c1', 'c2', 'c3'], { order => { c1 => 'asc', c3 => 'desc' } });
     is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_c1_c2_c3 ON schema.my_table (c1 ASC,c2,c3 DESC)');
 };
@@ -99,10 +107,10 @@ subtest 'to_sql returns a SQL representation of an index with length (does nothi
     is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column)');
 };
 
-subtest 'to_sql returns a SQL representation of an index using btree' => sub {
-    my $idx = Migrate::Index->new('my_table', 'column', { using => 'btree' });
-    is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column) USING btree');
-};
+#subtest 'to_sql returns a SQL representation of an index using btree' => sub {
+#    my $idx = Migrate::Index->new('my_table', 'column', { using => 'btree' });
+#    is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column) USING btree');
+#};
 
 subtest 'to_sql returns a SQL representation of an index with options' => sub {
     my $idx = Migrate::Index->new('my_table', 'column', { options => '<OPTIONS>' });
@@ -115,13 +123,13 @@ subtest 'to_sql returns a SQL representation of an index with custom name' => su
 };
 
 subtest 'to_sql returns a SQL representation of an index' => sub {
-    my $idx = Migrate::Index->new('my_table', ['c1', 'c2'], { unique => 1, order => { c2 => 'desc' }, using => 'btree', options => 'OPTS', name => 'custom_name' });
-    is($idx->to_sql, 'CREATE UNIQUE INDEX schema.custom_name ON schema.my_table (c1,c2 DESC) USING btree OPTS');
+    my $idx = Migrate::Index->new('my_table', ['c1', 'c2'], { unique => 1, order => { c2 => 'desc' }, options => 'OPTS', name => 'custom_name' });
+    is($idx->to_sql, 'CREATE UNIQUE INDEX schema.custom_name ON schema.my_table (c1,c2 DESC) OPTS');
 };
 
 subtest 'Index stringifies to an SQL representation of an index' => sub {
-    my $idx = Migrate::Index->new('my_table', ['c1', 'c2'], { unique => 1, order => { c2 => 'desc' }, using => 'btree', options => 'OPTS', name => 'custom_name' });
-    is("$idx", 'CREATE UNIQUE INDEX schema.custom_name ON schema.my_table (c1,c2 DESC) USING btree OPTS');
+    my $idx = Migrate::Index->new('my_table', ['c1', 'c2'], { unique => 1, order => { c2 => 'desc' }, options => 'OPTS', name => 'custom_name' });
+    is("$idx", 'CREATE UNIQUE INDEX schema.custom_name ON schema.my_table (c1,c2 DESC) OPTS');
 };
 
 done_testing();

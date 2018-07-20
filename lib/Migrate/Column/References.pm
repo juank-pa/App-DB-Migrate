@@ -10,11 +10,14 @@ use Migrate::Util;
 
 use parent qw(Migrate::Column);
 
+# TODO:
+# * Add support to 'polymorphic' references.
+
 sub new {
     my ($class, $table_name, $ref_name, $options) = @_;
     $options //= {};
     die("Reference name is needed\n") if !$ref_name;
-    my $id_name = "${ref_name}_id";
+    my $id_name = (ref($options->{foreign_key}) eq 'HASH' && $options->{foreign_key}->{column}) || "${ref_name}_id";
 
     my $col = bless($class->SUPER::new($id_name, $options->{type} || 'integer', $options), $class);
     $col->{table} = $table_name || die("Table name is needed\n");
@@ -33,7 +36,7 @@ sub _add_foreign_key {
     return unless $foreign_key;
 
     $foreign_key = ref($foreign_key) eq 'HASH'? $foreign_key : {};
-    my $to_table = delete($foreign_key->{to_table}) || $self->_get_table_from_column;
+    my $to_table = $foreign_key->{to_table} || $self->_get_table_from_column;
     $self->add_constraint(create('Constraint::ForeignKey', $self->table, $to_table, $foreign_key));
 }
 

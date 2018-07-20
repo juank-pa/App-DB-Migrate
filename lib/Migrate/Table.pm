@@ -7,6 +7,9 @@ use Scalar::Util qw(looks_like_number);
 use Migrate::Factory qw(class create);
 use Migrate::Util;
 
+# TODO:
+# * Add support to 'as' paramteter to pass a SQL query instead of a block (ignore other options).
+
 use overload
     fallback => 1,
     '""' => sub { $_[0]->to_sql };
@@ -20,8 +23,8 @@ sub new {
     };
 
     my $table = bless($data, $class);
-    $table->primary_key($name, { column => $options->{primary_key}, type => $options->{id}, autoincrement => 1 })
-    if !exists($options->{id}) || $options->{id};
+    $table->primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
+        if !exists($options->{id}) || $options->{id};
     return $table;
 }
 
@@ -58,10 +61,8 @@ sub AUTOLOAD {
     goto &$meth_ref;
 }
 
-# TODO: Add support polymorphic references
-
 sub column { shift->_push_column(create('column', @_)) }
-sub primary_key { shift->_push_column(create('Column::PrimaryKey', @_)) }
+sub primary_key { my $self = shift; $self->_push_column(create('Column::PrimaryKey', $self->name, @_)) }
 
 sub timestamps {
     my $self = shift;

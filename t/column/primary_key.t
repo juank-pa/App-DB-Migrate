@@ -54,7 +54,7 @@ subtest 'PrimaryKey sets the column name to id if not provided' => sub {
 };
 
 subtest 'PrimaryKey sets the column name to a custom name if provided' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'my_id_custom' });
+    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'my_id_custom');
     is($pk->name, 'my_id_custom');
 };
 
@@ -86,12 +86,12 @@ subtest 'PrimaryKey new does not pass autoincrement to constraint if unsupported
 };
 
 subtest 'PrimaryKey passes constraint as the constraint name' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { constraint => 'my_pk_constraint' });
+    my $pk = Migrate::Column::PrimaryKey->new('my_table', { name => 'my_pk_constraint' });
     is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'id', { name => 'my_pk_constraint' }]);
 };
 
 subtest 'PrimaryKey passes a custom column name to constraint' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'custom_column' });
+    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'custom_column');
     is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'custom_column', { }]);
 };
 
@@ -113,7 +113,7 @@ subtest 'to_sql returns SQL representation of primary key', => sub {
 };
 
 subtest 'to_sql returns SQL representation of primary key with custom column', => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'my_column' });
+    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'my_column');
     is($pk->to_sql, 'my_column <DATATYPE> <PK_CONSTRAINT>');
 };
 

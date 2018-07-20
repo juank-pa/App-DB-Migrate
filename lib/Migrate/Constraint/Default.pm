@@ -7,6 +7,10 @@ use overload
     fallback => 1,
     '""' => \&to_sql;
 
+# TODO:
+# * Add support to convert a numeric value coming from time()
+#   to a driver specific formatted date.
+
 sub new {
     my ($class, $default, $datatype) = @_;
     die("Datatype is needed\n") if !defined($datatype) && defined($default) && ref($default) ne 'HASH';

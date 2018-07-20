@@ -10,9 +10,6 @@ use overload
     fallback => 1,
     '""' => sub { $_[0]->to_sql };
 
-# TODO: Add support to convert a numeric value coming from time()
-#       to a driver specific formatted date.
-
 sub new {
     my ($class, $name, $datatype, $options) = @_;
     my $datatype_options = $class->_extract_datatype_options($options);
@@ -25,8 +22,8 @@ sub new {
 
     my $col = bless($data, $class);
 
-    $col->add_constraint(create('Constraint::Null', delete $options->{null})) if exists($options->{null});
-    $col->add_constraint(create('Constraint::Default', delete $options->{default}, $col->datatype)) if exists($options->{default});
+    $col->add_constraint(create('Constraint::Null', $options->{null})) if exists($options->{null});
+    $col->add_constraint(create('Constraint::Default', $options->{default}, $col->datatype)) if exists($options->{default});
 
     return $col;
 }
@@ -42,7 +39,7 @@ sub add_constraint {
     push(@{$self->{constraints}}, $constraint);
 }
 
-sub _extract_datatype_options { Migrate::Util::extract_keys($_[1], qw(limit precision scale)) }
+sub _extract_datatype_options { Migrate::Util::extract_keys($_[1], ['limit', 'precision', 'scale']) }
 
 sub to_sql {
     my $self = shift;
