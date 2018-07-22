@@ -40,9 +40,8 @@ sub _run_migration {
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
     my $handler = create('handler');
 
-    _run_migration_function($migration->{path}, $function, $handler);
-
-    die($@) if $@;
+    _load_migration($migration->{path}, $migration->{package});
+    _run_migration_function($migration->{package}, $function, $handler);
 
     my @sql = @{$handler->{sql}};
     say($_) foreach @sql;
@@ -60,14 +59,17 @@ sub _run_migration {
     $dbh->rollback;
 }
 
+sub _load_migration {
+    my ($path, $package) = @_;
+    open(my $fh, '<', $path);
+    my $contents = do{ local $/; <$fh> };
+    eval qq{package $package; $contents};
+}
+
 sub _run_migration_function {
-    my ($path, $function, $handler) = @_;
-    eval {
-        package Migrate::Migration;
-        no strict 'refs';
-        do($path);
-        "Migrate::Migration::$function"->($handler);
-    };
+    my ($package, $function, $handler) = @_;
+    no strict 'refs';
+    "${package}::${function}"->($handler);
 }
 
 sub _record_migration {

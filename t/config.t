@@ -79,6 +79,37 @@ subtest 'reload_config reloads and returns config.pl memoizing config' => sub {
     is($config->{test}, 'Hello');
 };
 
+subtest 'driver exracts the driner name from the dsn', => sub {
+    Migrate::Config::config({ dsn => 'dbi:MyDriver:etc' });
+    is(Migrate::Config::driver, 'MyDriver');
+};
+
+subtest 'driver returns driver is dsn is not specified', => sub {
+    Migrate::Config::config({ });
+    is(Migrate::Config::driver, 'Driver');
+};
+
+subtest 'id returns id if configuration does not define the id key' => sub {
+    Migrate::Config::config({});
+    is(Migrate::Config::id(), 'id');
+};
+
+subtest 'id returns a custom id if configuration defines id as a string' => sub {
+    Migrate::Config::config({ id => 'my_id'});
+    is(Migrate::Config::id(), 'my_id');
+};
+
+subtest 'id returns a custom id if configuration defines id as a sub' => sub {
+    Migrate::Config::config({ id => sub { 'my_id' }});
+    is(Migrate::Config::id(), 'my_id');
+};
+
+subtest 'id returns a custom id if configuration defines id as a sub passing table name' => sub {
+    Migrate::Config::config({ id => sub { "$_[0] - $_[1]" }});
+    is(Migrate::Config::id('people'), 'people - person');
+    is(Migrate::Config::id('departments'), 'departments - department');
+};
+
 sub prepare {
     my $hash = shift;
     Migrate::Config::config($hash || undef);

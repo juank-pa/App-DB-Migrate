@@ -9,6 +9,7 @@ use Migrate::Util;
 
 # TODO:
 # * Add support to 'as' paramteter to pass a SQL query instead of a block (ignore other options).
+# * Add a create_join_table
 
 use overload
     fallback => 1,

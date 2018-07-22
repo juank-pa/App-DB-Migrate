@@ -4,7 +4,9 @@ use strict;
 use warnings;
 
 use Lingua::EN::Inflexion qw(noun);
+
 use Migrate::Util;
+use Migrate::Config;
 
 use parent qw(Migrate::Constraint);
 
@@ -20,7 +22,7 @@ sub from_table { $_[0]->{from_table} }
 sub to_table { $_[0]->{to_table} }
 
 sub column { $_[0]->{options}->{column} || $_[0]->_get_column_name }
-sub primary_key { $_[0]->{options}->{primary_key} || 'id' }
+sub primary_key { $_[0]->{options}->{primary_key} || Migrate::Config::id($_[0]->to_table) }
 
 sub build_name { 'fk_'.$_[0]->from_table.'_'.$_[0]->column }
 

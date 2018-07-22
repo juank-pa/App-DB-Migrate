@@ -34,10 +34,8 @@ sub generate_create_table {
     my @columns = (_serialize_columns($cols), _serialize_columns($refs, 1));
     push(@columns, 'timestamps') if ($timestamps);
 
-    my @foreign_keys = _serialize_foreign_keys($table_name, $refs, 1);
     my $data = {
         'DBADDCOLUMNS' => _join_lines(2, '$th->', @columns),
-        'DBADDREFERENCES' => _join_lines(1, '$mh->', @foreign_keys),
     };
 
     _generate_file('create', $table_name, $table_name, $data);
@@ -114,7 +112,8 @@ sub _parse_column_opts {
 
     my $column_name = shift(@column_data) // die('Column name is required');
     my $options = { name => $column_name };
-    my $datatype_regex = qr/^(string|char|text|integer|float|decimal|date|datetime)(\d+(?:,\d+)*)?$/;
+    my $datatypes = join('|', keys(%{ Migrate::Factory::class('datatype')->datatypes }));
+    my $datatype_regex = qr/^($datatypes)(\d+(?:,\d+)*)?$/;
 
     foreach(@column_data) {
         if ($_ eq 'not_null') { $options->{null} = 0 }
@@ -162,26 +161,6 @@ sub _serialize_column_options {
     local $Data::Dumper::Terse = 1;
     local $Data::Dumper::Sortkeys = 1;
     return scalar keys %$options? ', '.Data::Dumper::Dumper($options) : '';
-}
-
-sub _serialize_foreign_keys {
-    my $table_name = shift;
-    my $columns = shift // return ();
-    my $is_add_mode = shift;
-    my $column_parser = $is_add_mode? \&_add_foreign_key : \&_drop_foreign_key;
-    return map { $column_parser->($table_name, $_->{name}) } @$columns;
-}
-
-sub _add_foreign_key {
-    my $source_table = shift;
-    my $target_table = shift;
-    return qq{add_foreign_key '$source_table', '$target_table'};
-}
-
-sub _drop_foreign_key {
-    my $source_table = shift;
-    my $target_table = shift;
-    return qq{remove_foreign_key '$source_table', '$target_table'};
 }
 
 sub _timestamp {

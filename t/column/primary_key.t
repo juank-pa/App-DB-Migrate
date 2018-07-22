@@ -95,6 +95,14 @@ subtest 'PrimaryKey passes a custom column name to constraint' => sub {
     is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'custom_column', { }]);
 };
 
+subtest 'name depends on config' => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock(id => 'any_id');
+
+    my $pk = Migrate::Column::PrimaryKey->new('my_table');
+    is($pk->name, 'any_id');
+};
+
 subtest 'table returns the table name', => sub {
     my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'custom_column' });
     is($pk->table, 'my_table');
@@ -115,6 +123,13 @@ subtest 'to_sql returns SQL representation of primary key', => sub {
 subtest 'to_sql returns SQL representation of primary key with custom column', => sub {
     my $pk = Migrate::Column::PrimaryKey->new('my_table', 'my_column');
     is($pk->to_sql, 'my_column <DATATYPE> <PK_CONSTRAINT>');
+};
+
+subtest 'to_sql returns SQL representation of primary key with config overridden column', => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock(id => 'any_id');
+    my $pk = Migrate::Column::PrimaryKey->new('my_table');
+    is($pk->to_sql, 'any_id <DATATYPE> <PK_CONSTRAINT>');
 };
 
 done_testing();

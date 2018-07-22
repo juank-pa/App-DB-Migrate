@@ -3,7 +3,6 @@ package Migrate::Constraint::PrimaryKey;
 use strict;
 use warnings;
 
-use Lingua::EN::Inflexion qw(noun verb);
 
 use Migrate::Util;
 

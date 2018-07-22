@@ -50,6 +50,14 @@ subtest 'primary_key returns id' => sub {
     is($fk->primary_key, 'id');
 };
 
+subtest 'primary_key default name depends on config' => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock(id => 'any_id');
+
+    my $pk = Migrate::Constraint::ForeignKey->new('users', 'departments');
+    is($pk->primary_key, 'any_id');
+};
+
 subtest 'primary_key returns the overridden primary_key' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { primary_key => 'other_column' });
     is($fk->primary_key, 'other_column');
@@ -93,6 +101,13 @@ subtest 'to_sql returns SQL representation of foreign key with overridden name' 
 subtest 'to_sql returns SQL representation of foreign key with overridden primary_key' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { primary_key => 'new_id' });
     is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (new_id)');
+};
+
+subtest 'to_sql returns SQL representation of foreign key with config overridden primary_key' => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock(id => 'any_id');
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
+    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (any_id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with delete rule' => sub {

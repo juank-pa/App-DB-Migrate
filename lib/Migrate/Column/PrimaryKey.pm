@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Migrate::Factory qw(create class);
+use Migrate::Config;
 
 use parent qw(Migrate::Column);
 
@@ -11,10 +12,11 @@ sub new {
     my ($class, $table, $column, $options) = @_;
     ($column, $options) = (undef, $column) if ref($column) eq 'HASH';
     $options ||= {};
+    $table || die("Table name needed\n");
     my $datatype = class('datatype')->is_valid_datatype($options->{type})?
         $options->{type} : $class->default_datatype;
 
-    my $col = $class->SUPER::new($column || 'id', $datatype, $options);
+    my $col = $class->SUPER::new($column || Migrate::Config::id($table), $datatype, $options);
     $col->{table} = $table || die("Table name needed\n");
 
     my $autoincrement = $options->{autoincrement};
