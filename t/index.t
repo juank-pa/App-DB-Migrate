@@ -107,11 +107,6 @@ subtest 'to_sql returns a SQL representation of an index with length (does nothi
     is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column)');
 };
 
-#subtest 'to_sql returns a SQL representation of an index using btree' => sub {
-#    my $idx = Migrate::Index->new('my_table', 'column', { using => 'btree' });
-#    is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column) USING btree');
-#};
-
 subtest 'to_sql returns a SQL representation of an index with options' => sub {
     my $idx = Migrate::Index->new('my_table', 'column', { options => '<OPTIONS>' });
     is($idx->to_sql, 'CREATE INDEX schema.idx_my_table_column ON schema.my_table (column) <OPTIONS>');

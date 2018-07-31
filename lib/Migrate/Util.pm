@@ -14,12 +14,20 @@ sub extract_keys {
     return \%ret;
 }
 
-sub identifier_name {
+sub qualified_name {
     my $table_name = shift;
+    return unless $table_name;
     my $config = Migrate::Config::config;
     return get_dbh()->quote_identifier($config->{catalog}, $config->{schema}, $table_name);
 }
 
-sub join_elems { join ' ', grep { $_ } @_ }
+sub identifier_name {
+    my $id_name = shift;
+    return unless $id_name;
+    my $config = Migrate::Config::config;
+    return get_dbh()->quote_identifier(undef, undef, $id_name);
+}
+
+sub join_elems { join ' ', grep { defined($_) && length($_) } @_ }
 
 return 1;

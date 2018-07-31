@@ -3,7 +3,6 @@ package Migrate::Datatype;
 use strict;
 use warnings;
 
-use Migrate::Handler;
 use Scalar::Util qw(weaken);
 use Migrate::Dbh qw{get_dbh};
 
@@ -55,10 +54,10 @@ sub quote {
 
 sub to_sql {
     my $self = shift;
-    $self->native_name.$self->_build_datatype_attrs();
+    $self->native_name.$self->build_attrs();
 }
 
-sub _build_datatype_attrs {
+sub build_attrs {
     my $self = shift;
     my ($m, $d) = ($self->precision // $self->limit, $self->scale);
     defined $m? '('.join(',', grep { defined $_ } ($m, $d)).')' : ''

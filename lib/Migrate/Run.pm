@@ -5,7 +5,7 @@ use warnings;
 use feature 'say';
 
 use Migrate::Dbh qw(get_dbh);
-use Migrate::Factory qw(create);
+use Migrate::Factory qw(create class);
 use Data::Dumper;
 
 sub run {
@@ -44,18 +44,15 @@ sub _run_migration {
     _run_migration_function($migration->{package}, $function, $handler);
 
     my @sql = @{$handler->{sql}};
-    say($_) foreach @sql;
-    return;
-
     my $dbh = get_dbh();
     $dbh->begin_work;
+    my $res;
 
-    $dbh->do($_) foreach @sql;
+    $dbh->do($_), say($_) foreach @sql;
     _record_migration($function, $migration->{id}, $dbh);
 
     return $dbh->commit unless $@;
 
-    die($@->errstr);
     $dbh->rollback;
 }
 
@@ -70,6 +67,7 @@ sub _run_migration_function {
     my ($package, $function, $handler) = @_;
     no strict 'refs';
     "${package}::${function}"->($handler);
+    $handler->flush();
 }
 
 sub _record_migration {

@@ -23,7 +23,7 @@ sub build_name {}
 sub to_sql {
     my $self = shift;
     return unless $self->constraint && $self->name;
-    Migrate::Util::join_elems($self->constraint, $self->name);
+    $self->_join_elems($self->constraint, $self->name);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }

@@ -20,7 +20,7 @@ sub new {
 
 sub table { $_[0]->{table} }
 sub columns { $_[0]->{columns} }
-sub name { $_[0]->{options}->{name} }
+sub name { $_[0]->{options}->{name} // 'idx_'.$_[0]->table.'_'.$_[0]->_column_list_name }
 sub order { $_[0]->{options}->{order} }
 sub length { $_[0]->{options}->{length} }
 sub uses { $_[0]->{options}->{using} }
@@ -60,9 +60,8 @@ sub to_sql {
     my $table = $self->table;
     my $qtable = Migrate::Util::identifier_name($table);
     my $unique = $self->is_unique && $self->unique;
-    my $name = Migrate::Util::identifier_name($self->name // 'idx_'.$table.'_'.$self->_column_list_name);
+    my $name = Migrate::Util::identifier_name($self->name);
     my $columns = $self->_columns_sql();
-    #my $using = $self->_using_sql;
     my $using = undef;
     return $self->_join_elems('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->options);
 }

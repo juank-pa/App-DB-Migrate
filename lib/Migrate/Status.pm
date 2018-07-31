@@ -41,7 +41,7 @@ sub print_migration ($_) {
 sub get_migrations {
     my $index = 0;
     my @files = get_migration_files();
-    my @migrations = map { $_->{migration_id} } (query_migrations);
+    my @migrations = map { $_->[0] } (query_migrations);
     my @results;
 
     foreach my $file (@files) {
