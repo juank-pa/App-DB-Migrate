@@ -3,8 +3,6 @@ package Migrate::SQLite::Datatype;
 use strict;
 use warnings;
 
-use Migrate::Handler;
-
 use parent qw(Migrate::Datatype);
 
 sub datatypes {

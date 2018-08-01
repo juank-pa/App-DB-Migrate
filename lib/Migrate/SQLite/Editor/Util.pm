@@ -30,7 +30,7 @@ sub get_id_re {
     my $name = shift;
     my $string_re = string_re($name && "q$name");
     my $uname = _re_name($name && "u$name");
-    return qr/(?:$string_re|(?$uname\w+))/;
+    return qr/$string_re|(?$uname\w+)/;
 }
 
 sub trim {

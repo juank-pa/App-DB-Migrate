@@ -5,7 +5,7 @@ use warnings;
 
 BEGIN {
     use parent qw(Exporter);
-    our @EXPORT_OK = qw(parse_table parse_column parse_constraint parse_datatype);
+    our @EXPORT_OK = qw(parse_table parse_column parse_index parse_constraint parse_datatype);
 }
 
 use Migrate::SQLite::Editor::Util qw(:all);
@@ -44,8 +44,24 @@ sub parse_column {
     my @tokens = _get_tokens($sql);
     my $name = _parse_name(shift(@tokens)) // die("Needs valid column name in SQL: $sql");
     my $datatype = _parse_datatype(\@tokens);
+    use Data::Dumper;
+    use feature 'say';
+    say(Dumper(\@tokens)) if $name =~ /artist_id/;
     my @constraints = _parse_constraints(\@tokens);
     return Migrate::SQLite::Editor::Column->new($name, $datatype, @constraints);
+}
+
+sub parse_index {
+    my $sql = shift;
+    my $index_re = get_id_re('index');
+    my $table_re = get_id_re('table');
+    use Data::Dumper;
+    $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*$index_re\s*on\s*$table_re\s*\((?<cols>.*)\)/i;
+    my $name = $+{uindex} || $+{qindex};
+    my $table = $+{utable} || $+{qtable};
+    my $options = { unique => $+{unique} };
+    my $columns = [ map { trim($_) } split(',', $+{cols}) ];
+    return Migrate::SQLite::Editor::Index->new($name, $table, $columns, $options);
 }
 
 sub parse_datatype { _parse_datatype([ _get_tokens(shift) ]) }
@@ -97,9 +113,9 @@ sub _parse_constraint {
     return $token unless $token =~ /^(?:constraint|default|references|not|null)$/i;
 
     my @result;
-    my $name = $token =~ /^constraint$/? shift(@$tokens) : undef;
+    my $name = $token =~ /^constraint$/i? shift(@$tokens) : undef;
     my $type = $name? shift(@$tokens) : $token;
-    return $token unless $type =~ /^(?:default|references|not)$/i;
+    return ($token, $name, $type) unless $type =~ /^(?:default|references|not)$/i;
 
     my @pred;
     if ($type =~ /^not$/i && $tokens->[0] =~ /^null$/i) {
