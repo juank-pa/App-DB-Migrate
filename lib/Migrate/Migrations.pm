@@ -5,7 +5,7 @@ use warnings;
 
 use Migrate::Util;
 
-sub migrations_table_name { Migrate::Util::identifier_name('_migrations') }
+sub migrations_table_name { '_migrations' }
 
 sub create_migrations_table_sql { }
 sub select_migrations_sql { }
