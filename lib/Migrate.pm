@@ -15,7 +15,7 @@ use constant ACTION_OPTIONS => {
     generate => ['name|n:s', 'column|c:s@', 'ref|r:s@', 'tstamps|t'],
     status => ['file|f'],
     run => [],
-    rollback => [],
+    rollback => ['steps|s:i'],
     setup => [],
 };
 

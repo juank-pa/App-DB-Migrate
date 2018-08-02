@@ -7,6 +7,7 @@ use feature 'say';
 use Migrate::Dbh qw(get_dbh);
 use Migrate::Factory qw(create class);
 use Data::Dumper;
+use List::Util qw(min);
 
 sub run {
     Migrate::Setup::setup_migrations_table();
@@ -14,13 +15,16 @@ sub run {
 }
 
 sub rollback {
+    my $options = shift;
+    my $steps = $options->{steps} || 1;
     Migrate::Setup::setup_migrations_table();
-    _run_migrations('up', shift)
+    _run_migrations('up', $steps)
 }
 
 sub _run_migrations {
     my $filter = shift;
     my @migrations = _filtered_migrations($filter, @_);
+    say('No more migrations to rollback') && exit unless @migrations;
     _run_migration($_) foreach @migrations;
 }
 
@@ -32,7 +36,8 @@ sub _filtered_migrations {
     $steps = scalar(@migrations) if $steps < 0;
     @migrations = reverse @migrations if $filter eq 'up';
 
-    return @migrations[0 .. $steps - 1];
+    return () unless scalar @migrations;
+    return @migrations[0 .. min($steps - 1, $#migrations)];
 }
 
 sub _run_migration {
