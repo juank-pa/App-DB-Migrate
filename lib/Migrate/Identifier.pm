@@ -1,4 +1,4 @@
-package Migrate::Name;
+package Migrate::Identifier;
 
 use strict;
 use warnings;

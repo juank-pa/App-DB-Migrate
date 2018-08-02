@@ -18,9 +18,10 @@ sub new {
     return bless($data, $class);
 }
 
-sub name {
+sub name { $_[0]->identifier->name }
+sub identifier {
     my $self = shift;
-    $self->{qname} //= create('name',
+    $self->{qname} //= create('identifier',
         $self->{options}->{name} // 'idx_'.$self->table.'_'.$self->_column_list_name, 1
     );
 }
@@ -65,7 +66,7 @@ sub to_sql {
     my $table = $self->table;
     my $qtable = $table;
     my $unique = $self->is_unique && $self->unique;
-    my $name = $self->name;
+    my $name = $self->identifier;
     my $columns = $self->_columns_sql();
     my $using = undef;
     return $self->_join_elems('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->options);

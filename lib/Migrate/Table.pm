@@ -23,14 +23,15 @@ sub new {
         columns => []
     };
 
-    $data->{name} = create('name', $name, 1);
+    $data->{name} = create('identifier', $name, 1);
     my $table = bless($data, $class);
     $table->primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
         if !exists($options->{id}) || $options->{id};
     return $table;
 }
 
-sub name { shift->{name} }
+sub identifier { shift->{name} }
+sub name { shift->identifier->name }
 sub options { shift->{options}{options} }
 sub is_temporary { shift->{options}{temporary} }
 sub columns { $_[0]->{columns} }
@@ -64,7 +65,7 @@ sub AUTOLOAD {
 }
 
 sub column { shift->_push_column(create('column', @_)) }
-sub primary_key { my $self = shift; $self->_push_column(create('Column::PrimaryKey', $self->name->name, @_)) }
+sub primary_key { my $self = shift; $self->_push_column(create('Column::PrimaryKey', $self->name, @_)) }
 
 sub timestamps {
     my $self = shift;
@@ -73,15 +74,14 @@ sub timestamps {
 
 sub references {
     my ($self, $column, $options) = @_;
-    $self->_push_column(create('Column::References', $self->name->name, $column, $options));
+    $self->_push_column(create('Column::References', $self->name, $column, $options));
 }
 
 sub to_sql {
     my $self = shift;
     my $columns = join(',', @{$self->{columns}});
-    my $name = $self->name;
     my $temporary = $self->is_temporary && $self->temporary;
-    return $self->_join_elems('CREATE', $temporary, 'TABLE', $name, "($columns)", $self->options);
+    return $self->_join_elems('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)", $self->options);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }

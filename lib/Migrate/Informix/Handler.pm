@@ -16,17 +16,17 @@ sub _add_indexes {
 
 sub rename_index {
     my ($self, $old_name, $new_name) = @_;
-    $self->execute('RENAME INDEX '.create('name', $old_name, 1).' TO '.$new_name);
+    $self->execute('RENAME INDEX '.create('identifier', $old_name, 1).' TO '.$new_name);
 }
 
 sub rename_table {
     my ($self, $old_name, $new_name) = @_;
-    $self->execute('RENAME TABLE '.create('name', $old_name, 1).' TO '.$new_name);
+    $self->execute('RENAME TABLE '.create('identifier', $old_name, 1).' TO '.$new_name);
 }
 
 sub rename_column {
     my ($self, $table, $old_name, $new_name) = @_;
-    $self->execute('RENAME COLUMN '.create('name', $table, 1).'.'.create('name', $old_name).' TO '.$new_name);
+    $self->execute('RENAME COLUMN '.create('identifier', $table, 1).'.'.create('identifier', $old_name).' TO '.$new_name);
 }
 
 sub add_foreign_key {

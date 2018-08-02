@@ -1,9 +1,9 @@
-package Migrate::Informix::Name;
+package Migrate::Informix::Identifier;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Name);
+use parent qw(Migrate::Identifier);
 
 sub to_sql {
     my $self = shift;

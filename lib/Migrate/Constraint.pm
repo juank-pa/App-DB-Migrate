@@ -17,15 +17,15 @@ sub new {
 
 sub constraint { 'CONSTRAINT' }
 
-sub name { $_[0]->{qname} //= create('name', $_[0]->{name} || $_[0]->build_name) }
+sub identifier { $_[0]->{qname} //= create('identifier', $_[0]->{name} || $_[0]->build_name) }
 sub build_name {}
 
 sub add_constraint { my $self = shift; unshift(@_, $self->constraint_sql); @_ }
 
 sub constraint_sql {
     my $self = shift;
-    return unless $self->constraint && $self->name;
-    $self->_join_elems($self->constraint, $self->name);
+    return unless $self->constraint && $self->identifier->name;
+    $self->_join_elems($self->constraint, $self->identifier);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }

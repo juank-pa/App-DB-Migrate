@@ -41,12 +41,12 @@ sub create_table {
     $self->execute($table);
 
     my @indexes = grep { $_->index } @{$table->columns};
-    $self->_add_indexes($table->name->name, @indexes);
+    $self->_add_indexes($table->name, @indexes);
 }
 
 sub _add_indexes {
-    my ($self, $table_name, @indexes) = @_;
-    $self->add_index($table_name, $_->name, $self->_get_index_options($_)) for @indexes;
+    my ($self, $table, @indexes) = @_;
+    $self->add_index($table, $_->name, $self->_get_index_options($_)) for @indexes;
 }
 
 sub _get_index_options { $_[1]->index if ref($_[1]->index) eq 'HASH' }
@@ -58,7 +58,7 @@ sub add_column {
 
 sub add_reference {
     my ($self, $table, $ref_name, $options) = @_;
-    return $self->add_raw_column($table, create('Column::References', $self->table_name, $ref_name, $options));
+    return $self->add_raw_column($table, create('Column::References', $table, $ref_name, $options));
 }
 
 sub add_timestamps {
@@ -69,19 +69,19 @@ sub add_timestamps {
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
-    $self->execute('ALTER TABLE '.create('name', $table, 1).' ADD '.$column);
+    $self->execute('ALTER TABLE '.create('identifier', $table, 1).' ADD '.$column);
 }
 
 sub add_index { shift->execute(create('index', @_)) }
 
 sub drop_table {
     my ($self, $table) = @_;
-    $self->execute('DROP TABLE '.create('name', $table, 1));
+    $self->execute('DROP TABLE '.create('identifier', $table, 1));
 }
 
 sub remove_column {
     my ($self, $table, $column) = @_;
-    $self->execute('ALTER TABLE '.create('name', $table, 1)." DROP $column");
+    $self->execute('ALTER TABLE '.create('identifier', $table, 1)." DROP $column");
 }
 
 sub remove_columns {
@@ -101,7 +101,7 @@ sub remove_index {
     my ($self, $table, $column, $options) = @_;
     my $index = create('index', $table, $column, $options);
     my $index_name = $index->name;
-    $self->execute('DROP INDEX '.create('name', $index_name, 1));
+    $self->execute('DROP INDEX '.create('identifier', $index_name, 1));
 }
 
 sub irreversible {
