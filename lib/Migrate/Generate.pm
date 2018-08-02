@@ -146,12 +146,13 @@ sub _serialize_columns {
 }
 
 sub _serialize_column {
-    my $options = { %{shift(@_)} } // {};
+    my $options = { %{shift(@_)} };
     my $is_ref = shift;
     my $column_name = delete $options->{name} // die('Column name is required');
     my $column_type = delete $options->{type} // 'string';
+    $options->{foreign_key} = 1 if $is_ref && Migrate::Config::config->{foreign_keys};
     my $options_str = _serialize_column_options($options);
-    return $is_ref? qq[references('$column_name')] : qq[$column_type('$column_name'$options_str)];
+    return $is_ref? qq[references('$column_name'$options_str)] : qq[$column_type('$column_name'$options_str)];
 }
 
 sub _serialize_column_options {
@@ -160,7 +161,7 @@ sub _serialize_column_options {
     local $Data::Dumper::Quotekeys = 0;
     local $Data::Dumper::Terse = 1;
     local $Data::Dumper::Sortkeys = 1;
-    return scalar keys %$options? ', '.Data::Dumper::Dumper($options) : '';
+    return scalar keys %$options? ', '.Dumper($options) : '';
 }
 
 sub _timestamp {

@@ -12,4 +12,8 @@
     # The method receives the table name and the singular form of the table name as paramteres.
     # You can also set this key to a fixed string value.
     # id => sub { "$_[1]_id" },
+
+    # By default migrate generate do not add foreign keys to column references.
+    # Uncomment this line to make it add the foreign_key => 1 property.
+    # foreign_keys => 1,
 }
