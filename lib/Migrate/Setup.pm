@@ -25,11 +25,11 @@ my $source_templates_path = File::Spec->catfile(Migrate::Config::library_root, '
 my $source_config_path = File::Spec->catfile($source_templates_path, $config_file_name);
 my $target_config_path = File::Spec->catfile($db_path, $config_file_name);
 my $target_config_sample_path = "$target_config_path.example";
+my $gitignore_path = File::Spec->catfile($db_path, '.gitignore');
 
 sub migrations_folder_exists ();
 
 # TODO:
-# * Add .gitignore for config files if inside a github repo.
 # * Add svn:ignore if we are in an svn repo.
 
 sub execute {
@@ -83,6 +83,14 @@ sub create_migration_config_sample_file {
     return 1;
 }
 
+sub create_gitignore_file {
+    create_migrations_folder();
+    return 0 if -e $gitignore_path;
+
+    open(my $fh, '>', $gitignore_path) or die($@);
+    say $fh $config_file_name;
+}
+
 sub setup {
     my @files;
 
@@ -99,11 +107,15 @@ sub setup {
     $success = eval { create_migration_config_file() };
     _push_file(\@files, $target_config_path, $success, $@);
 
+    $success = eval { create_gitignore_file() };
+    _push_file(\@files, $gitignore_path, $success, $@);
+
     return @files;
 }
 
 sub setup_migrations_table {
-    get_dbh()->do(class('migrations')->create_migrations_table_sql);
+    get_dbh()->do(class('migrations')->create_migrations_table_sql)
+        or die("Could not create _migrations table in DB\n$DBI::errstr");
 }
 
 return 1;
