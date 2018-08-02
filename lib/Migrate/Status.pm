@@ -14,7 +14,7 @@ sub print_migration ($_);
 sub execute {
     my $options = shift;
     Migrate::Setup::setup_migrations_table();
-    print_migrations(exists $options->{f});
+    print_migrations(exists $options->{file});
 }
 
 sub query_migrations {
