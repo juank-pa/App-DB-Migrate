@@ -17,7 +17,7 @@ sub set_predicate { $_[0]->{pred} = $_[1] }
 sub to_sql {
     my $self = shift;
     my $constraint = $self->{name}? "CONSTRAINT $self->{name}" : undef;
-    return join ' '. grep { $_ } ($constraint, $self->{type}, @{ $self->{pred} });
+    return join ' ', grep { $_ } ($constraint, $self->{type}, @{ $self->{pred} });
 }
 
 return 1;

@@ -3,12 +3,11 @@ package Migrate::SQLite::Editor::Column;
 use strict;
 use warnings;
 
-use feature 'say';
-
 use parent qw(Migrate::SQLizable);
 
 use Migrate::SQLite::Editor::Util qw(trim);
-use Migrate::SQLite::Editor::Parser qw(parse_constraint);
+use Migrate::SQLite::Editor::Parser qw(parse_constraint parse_datatype);
+use Migrate::SQLite::Editor::Datatype;
 use Migrate::Factory qw(create class);
 use Migrate::Util;
 
@@ -39,36 +38,49 @@ sub change_datatype {
     return 1;
 }
 
-sub is_null { !grep { ref($_) && $_->type =~ /^not null$/i } @{ shift->{constraints} } }
+sub is_null { !$_[0]->_select_constraint('not null') }
 
 sub change_null {
     my ($self, $null) = @_;
     my $is_null = $self->is_null;
     return if !!$is_null == !!$null;
 
-    if ($null) { $_->{constraints} = grep { $_->type !~ /^not null$/i } @{ $self->{constraints} }  }
+    if ($null) { $self->_remove_constraint('not null') }
     else { push @{ $self->{constraints} }, parse_constraint('NOT NULL') }
     return 1;
 }
 
-sub default { grep { ref($_) && $_->type =~ /^default$/i } @{ shift->{constraints} } }
+sub _select_constraint {
+    my ($self, $name) = @_;
+    return grep { _is_constraint($_, $name) } @{ $self->{constraints} };
+}
+
+sub _remove_constraint {
+    my ($self, $name) = @_;
+    $self->{constraints} = [ grep { !_is_constraint($_, $name) } @{ $self->{constraints} } ];
+}
+
+sub _is_constraint {
+    my ($constraint, $name) = @_;
+    return ref($constraint) && $constraint->type =~ /^$name$/i
+}
+
+sub default { $_[0]->_select_constraint('default') }
 
 sub change_default {
     my ($self, $default) = @_;
     my $prev_default = $self->default;
     return if !$prev_default && !defined($default);
 
-    my $datatype = create('datatype', $self->datatype || 'string');
+    my $datatype = create('datatype', $Migrate::SQLite::Editor::Datatype::datatypes{$self->datatype // ''} || 'string');
     my $default_obj = create('Constraint::Default', $default, { type => $datatype });
     if ($prev_default) {
         if (defined $default) { $self->_update_default($prev_default, $default_obj) }
-        else { $self->_remove_default() }
+        else { $self->_remove_constraint('default') }
     }
     else { $self->_add_default($default_obj) }
     return 1;
 }
-
-sub _remove_default { grep { ref($_) && $_->type !~ /^default$/i } @{ shift->{constraints} } }
 
 sub _update_default {
     my ($self, $prev_default, $new_default) = @_;
@@ -80,17 +92,17 @@ sub _add_default {
     push @{ $self->{constraints} }, parse_constraint($default);
 }
 
-sub has_fk { return grep { ref($_) && $_->type =~ /^references$/i } @{ shift->{constraints} } }
+sub has_foreign_key { $_[0]->_select_constraint('references') }
 
 sub add_foreign_key {
     my ($self, $from, $to, $options) = @_;
-    return if $self->has_fk;
+    return if $self->has_foreign_key;
     my $fk_obj = create('Constraint::ForeignKey', $from, $to, $options);
     push @{ $self->{constraints} }, parse_constraint($fk_obj);
     return 1;
 }
 
-sub remove_foreign_key { return grep { ref($_) && $_->type !~ /^references$/i } @{ shift->{constraints} } }
+sub remove_foreign_key { $_[0]->_remove_constraint('references') }
 
 sub to_sql {
     my $self = shift;

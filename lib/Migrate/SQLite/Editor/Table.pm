@@ -8,6 +8,7 @@ use Lingua::EN::Inflexion qw(noun verb);
 use Migrate::SQLite::Editor::Index;
 use Migrate::SQLite::Editor::Column;
 use Migrate::SQLite::Editor::Util qw(get_id_re string_re name_re);
+use Migrate::SQLite::Editor::Parser qw(parse_column);
 use Migrate::Util;
 use Migrate::Factory qw(create class);
 
@@ -45,30 +46,30 @@ sub _insert_column_names {
 sub rename {
     my $self = shift;
     my $new_name = shift;
-    my $prev_name = $self->table_name;
-    my $re = _table_name_re();
+    my $prev_name = $self->name;
+    my $re = _name_re();
     $self->{prefix} =~ s/$re/$+{prefix}"$new_name"/;
     return qq{ALTER TABLE "$prev_name" RENAME TO "$new_name"};
 }
 
-sub _table_name_re {
+sub _name_re {
     my $table_re = get_id_re('table');
     return qr/^(?<prefix>create\s+table\s+)(?:$table_re)/i;
 }
 
-sub table_name {
+sub name {
     my $self = shift;
-    my $table_name_re = _table_name_re();
-    $self->{prefix} =~ /$table_name_re/;
+    my $name_re = get_id_re('table');
+    $self->{prefix} =~ /\s*create\s+table\s*$name_re/io;
     return $+{qtable} || $+{utable};
 }
 
 sub indexes { $_[0]->{indexes} }
 
 sub add_raw_column {
-    my ($self, $column) = @_;
-    my $table = $self->table_name;
-    my $column_obj = Migrate::SQLite::Editor::Column->new($column);
+    my ($self, $column_sql) = @_;
+    my $table = $self->name;
+    my $column_obj = parse_column($column_sql);
     push(@{ $self->{columns} }, $column_obj);
     push(@{ $self->{added_columns} }, $column_obj->name);
     return $self->set_changed(1, 1);
@@ -89,8 +90,8 @@ sub set_changed {
     my ($self, $changed, $heavy, $from, $to) = @_;
     return $self unless $changed;
 
-    $self->{heavy} ||= $heavy || 0;
-    $self->{changed} = 1;
+    $self->{heavy} ||= $heavy;
+    $self->{changed} ||= $changed;
     $self->{changes}++;
     $self->{renames}->{$to} = $from if $from && $to;
     return $self;
@@ -98,22 +99,29 @@ sub set_changed {
 
 sub add_foreign_key {
     my ($self, $to, $options) = @_;
-    my $column_name = $options->{column} || noun($to)->singular.'_id';
+    my $column_name = _get_reference_column($options, $to);
     my $column = $self->_column($column_name);
-    return $self->set_changed($column->add_foreign_key($self->table_name, $to, $options), 1);
+    return $self->set_changed($column->add_foreign_key($self->name, $to, $options), 1);
 }
 
 sub remove_foreign_key {
     my ($self, $to, $options) = @_;
-    my $column_name = $options->{column} || noun($to)->singular.'_id';
+    my $column_name = _get_reference_column($options, $to);
     my $column = $self->_column($column_name);
     return $self->set_changed($column->remove_foreign_key(), 0);
+}
+
+sub _get_reference_column {
+    my $options = shift // {};
+    my $table_name = shift || die('Need table name');
+    return $options->{column} || noun($table_name)->singular.'_id'
 }
 
 sub rename_column {
     my ($self, $from, $to) = @_;
     my $column = $self->_column($from);
-    return $self->set_changed($column->rename($to), $from, $to);
+    $self->_rename_indexes($from, $to);
+    return $self->set_changed($column->rename($to), 1, $from, $to);
 }
 
 sub _column {
@@ -146,7 +154,7 @@ sub change_column_null {
 
 sub _alter_table {
     my $self = shift;
-    my $orig_table = $self->table_name;
+    my $orig_table = $self->name;
     my $clone_table = "_$orig_table(clone)";
 
     $self->rename($clone_table);
@@ -163,6 +171,11 @@ sub _remove_indexes {
     my @indexes = @{ $self->indexes };
     $_->remove_column($column) for @indexes;
     return grep { $_->has_columns } @indexes;
+}
+
+sub _rename_indexes {
+    my ($self, $column, $new_column, $indexes) = @_;
+    $_->rename_column($column, $new_column) for @{ $self->indexes };
 }
 
 sub _remove_column {
@@ -188,17 +201,17 @@ sub table_sql { my $self = shift; ($self->{prefix}.join(',', @{ $self->{columns}
 
 sub added_columns_count { scalar @{ $_[0]->{added_columns} } }
 
-sub only_added_columns { my $added = $_[0]->added_columns_count; $added && $added == $_[0]->{changes} }
+sub added_columns_only { my $added = $_[0]->added_columns_count; $added && $added == $_[0]->{changes} }
 
 sub added_columns_sql {
     my $self = shift;
-    my $table = $self->table_name;
+    my $table = $self->name;
     return map { qq{ALTER TABlE "$table" ADD COLUMN }.$_ } @{ $self->{added_columns} };
 }
 
 sub to_sql {
     my $self = shift;
-    return $self->added_columns_sql if $self->only_added_columns;
+    return $self->added_columns_sql if $self->added_columns_only;
     return $self->has_changed? $self->_alter_table() : $self->table_sql;
 }
 
