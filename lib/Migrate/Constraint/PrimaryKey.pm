@@ -3,7 +3,6 @@ package Migrate::Constraint::PrimaryKey;
 use strict;
 use warnings;
 
-
 use Migrate::Util;
 
 use parent qw(Migrate::Constraint);
@@ -29,7 +28,7 @@ sub autoincrement_sql { $_[0]->autoincrement if $_[0]->autoincrements }
 
 sub to_sql {
     my $self = shift;
-    $self->_join_elems($self->SUPER::to_sql, $self->primary_key, $self->autoincrement_sql);
+    $self->_join_elems($self->add_constraint($self->primary_key, $self->autoincrement_sql));
 }
 
 return 1;

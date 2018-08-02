@@ -25,7 +25,7 @@ sub identifier_name {
     my $id_name = shift;
     return unless $id_name;
     my $config = Migrate::Config::config;
-    return get_dbh()->quote_identifier(undef, undef, $id_name);
+    return get_dbh()->quote_identifier($id_name);
 }
 
 sub join_elems { join ' ', grep { defined($_) && length($_) } @_ }

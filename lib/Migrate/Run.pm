@@ -41,19 +41,19 @@ sub _run_migration {
     my $handler = create('handler');
 
     _load_migration($migration->{path}, $migration->{package});
-    _run_migration_function($migration->{package}, $function, $handler);
 
-    my @sql = @{$handler->{sql}};
     my $dbh = get_dbh();
     $dbh->begin_work;
-    my $res;
 
-    $dbh->do($_), say($_) foreach @sql;
-    _record_migration($function, $migration->{id}, $dbh);
+    eval {
+        _run_migration_function($migration->{package}, $function, $handler);
+        _record_migration($function, $migration->{id}, $dbh);
+    };
 
     return $dbh->commit unless $@;
 
     $dbh->rollback;
+    die($@);
 }
 
 sub _load_migration {
@@ -65,20 +65,23 @@ sub _load_migration {
 
 sub _run_migration_function {
     my ($package, $function, $handler) = @_;
+    my $qualified_function = "${package}::${function}";
+
+    say('-' x (length($qualified_function) + 8));
+    say("Running $qualified_function");
+
     no strict 'refs';
-    "${package}::${function}"->($handler);
+    $qualified_function->($handler);
+    use strict;
     $handler->flush();
 }
 
 sub _record_migration {
     my ($function, $id, $dbh) = @_;
-
-    if ($function eq 'up') {
-        $dbh->prepare(class('migrations')->insert_migration_sql)->execute($id);
-    }
-    else {
-        $dbh->prepare(class('migrations')->delete_migration_sql)->execute($id);
-    }
+    my $sql = $function eq 'up'
+        ? class('migrations')->insert_migration_sql
+        : class('migrations')->delete_migration_sql;
+    $dbh->prepare($sql)->execute($id) or die("Error recording migration data ($function)");
 }
 
 return 1;

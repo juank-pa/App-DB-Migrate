@@ -39,6 +39,6 @@ sub _quoted_default_value {
     return $self->datatype->quote($self->value);
 }
 
-sub to_sql { $_[0]->_join_elems($_[0]->SUPER::to_sql, $_[0]->default, $_[0]->_quoted_default_value) }
+sub to_sql { $_[0]->_join_elems($_[0]->add_constraint($_[0]->default, $_[0]->_quoted_default_value)) }
 
 return 1;

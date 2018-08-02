@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Migrate::Util;
+use Migrate::Factory qw(create class);
 
 use overload
     fallback => 1,
@@ -11,16 +12,17 @@ use overload
 
 sub new {
     my ($class, $options) = @_;
-    my $data = { options => $options // {} };
-    return bless($data, $class);
+    return bless({ name => $options->{name} }, $class);
 }
 
 sub constraint { 'CONSTRAINT' }
 
-sub name { Migrate::Util::identifier_name($_[0]->{options}->{name} || $_[0]->build_name) }
+sub name { $_[0]->{qname} //= create('name', $_[0]->{name} || $_[0]->build_name) }
 sub build_name {}
 
-sub to_sql {
+sub add_constraint { my $self = shift; unshift(@_, $self->constraint_sql); @_ }
+
+sub constraint_sql {
     my $self = shift;
     return unless $self->constraint && $self->name;
     $self->_join_elems($self->constraint, $self->name);

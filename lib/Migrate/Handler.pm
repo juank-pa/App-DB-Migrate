@@ -9,7 +9,7 @@ use Migrate::Factory qw(create);
 use Migrate::Dbh qw{get_dbh};
 use DBI;
 
-use feature 'switch';
+use feature 'say';
 
 our $instance;
 my $driver;
@@ -18,7 +18,16 @@ sub new {
     bless { sql => [] }, shift;
 }
 
-sub push_sql { push @{$_[0]->{sql}}, $_[1] }
+sub execute {
+    my $self = shift;
+    my @sqls = @_;
+    my $dbh = get_dbh();
+    for my $sql (@sqls) {
+        my $sth = $dbh->prepare($sql) or die("$DBI::errstr\n$sql");
+        $sth->execute() or die("$DBI::errstr\n$sql");
+        say($sql);
+    }
+}
 
 sub create_table {
     my ($self, $name, $options, $sub) = @_;
@@ -26,14 +35,15 @@ sub create_table {
     my $table = create('table', $name, $options);
 
     $sub->($table);
-    $self->push_sql($table);
-    $self->_add_indices($table);
+    $self->execute($table);
+
+    my @indexes = grep { $_->index } @{$table->columns};
+    $self->_add_indexes($table->name->name, @indexes);
 }
 
-sub _add_indices {
-    my ($self, $table) = @_;
-    my @indices = grep { $_->index } @{$table->columns};
-    $self->add_index($table->name, $_->name, $self->_get_index_options($_)) for @indices;
+sub _add_indexes {
+    my ($self, $table_name, @indexes) = @_;
+    $self->add_index($table_name, $_->name, $self->_get_index_options($_)) for @indexes;
 }
 
 sub _get_index_options { $_[1]->index if ref($_[1]->index) eq 'HASH' }
@@ -56,19 +66,19 @@ sub add_timestamps {
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
-    $self->push_sql('ALTER TABLE '.Migrate::Util::identifier_name($table).' ADD COLUMN '.$column;
+    $self->execute('ALTER TABLE '.create('name', $table, 1).' ADD '.$column);
 }
 
-sub add_index { shift->push_sql(create('index', @_)) }
+sub add_index { shift->execute(create('index', @_)) }
 
 sub drop_table {
     my ($self, $table) = @_;
-    $self->push_sql('DROP TABLE '.Migrate::Util::identifier_name($table));
+    $self->execute('DROP TABLE '.create('name', $table, 1));
 }
 
 sub remove_column {
     my ($self, $table, $column) = @_;
-    $self->push_sql('ALTER TABLE '.Migrate::Util::identifier_name($table)." DROP COLUMN $column");
+    $self->execute('ALTER TABLE '.create('name', $table, 1)." DROP $column");
 }
 
 sub remove_columns {
@@ -88,7 +98,7 @@ sub remove_index {
     my ($self, $table, $column, $options) = @_;
     my $index = create('index', $table, $column, $options);
     my $index_name = $index->name;
-    $self->push_sql('DROP INDEX '.Migrate::Util::identifier_name($name));
+    $self->execute('DROP INDEX '.create('name', $index_name, 1));
 }
 
 sub flush { }

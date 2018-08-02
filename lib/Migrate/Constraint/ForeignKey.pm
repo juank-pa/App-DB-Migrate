@@ -54,7 +54,8 @@ sub to_sql {
     my $update_rule = $self->valid_rules('update')->{$self->update_action // ''};
     my $on_delete = $delete_rule && $self->on_delete? $self->on_delete.' '.$delete_rule : undef;
     my $on_update = $update_rule && $self->on_update? $self->on_update.' '.$update_rule : undef;
-    return $self->_join_elems($self->SUPER::to_sql, $self->references, $self->to_table, '('.$self->primary_key.')', $on_delete, $on_update);
+    my @elems = $self->add_constraint($self->references, $self->to_table, '('.$self->primary_key.')', $on_delete, $on_update);
+    return $self->_join_elems(@elems);
 }
 
 return 1;
