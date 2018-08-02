@@ -23,8 +23,9 @@ sub rollback {
 
 sub _run_migrations {
     my $filter = shift;
-    my @migrations = _filtered_migrations($filter, @_);
-    say('No more migrations to rollback') && exit unless @migrations;
+    my $steps = shift;
+    my @migrations = _filtered_migrations($filter, $steps);
+    say('No more migrations to '.($steps == -1? 'run' : 'rollback')) && exit unless @migrations;
     _run_migration($_) foreach @migrations;
 }
 

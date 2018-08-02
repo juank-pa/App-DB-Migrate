@@ -96,7 +96,9 @@ sub _generate_columns_from_opts {
     my @columns = _parse_columns_opts($options->{column});
     my @refs = _parse_columns_opts($options->{ref});
     my $has_columns = scalar @columns || scalar @refs;
-    push(@columns, _get_column_from_subject($action, $subject)) if $action ne CREATE && !$has_columns;
+    my $has_timestamps = $options->{tstamps};
+    my $infer_column = $action ne CREATE && !$has_columns && !$has_timestamps;
+    push(@columns, _get_column_from_subject($action, $subject)) if $infer_column;
 
     generate_columns($action, $subject, \@columns, \@refs, $options->{tstamps});
 }
@@ -225,7 +227,7 @@ sub _serialize_column_method {
     my $datatype = shift;
     my $options = shift;
     return qq[$datatype('$column'$options)] if $action eq CREATE;
-    return qq[remove_colum('$table','$column')] if $action eq REMOVE;
+    return qq[remove_column('$table','$column')] if $action eq REMOVE;
     return qq[add_column('$table', '$column', '$datatype'$options)];
 }
 
