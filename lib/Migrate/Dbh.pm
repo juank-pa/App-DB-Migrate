@@ -16,11 +16,11 @@ use DBI;
 use Migrate::Config;
 
 our $_DBH;
-our $DefaultOptions = { RaiseError => 1, AutoCommit => 1, ChopBlanks => 1, ShowErrorStatement => 1 };
+our $DefaultOptions = { PrintError => 0, RaiseError => 0, AutoCommit => 1, ChopBlanks => 1 };
 
 sub dbh_attr {
     my $attr  = Migrate::Config::config->{attr};
-    return \(%$DefaultOptions, %$attr);
+    return { %$DefaultOptions, %$attr };
 }
 
 sub get_dbh
@@ -34,7 +34,6 @@ sub get_dbh
     eval {
         $dbh = DBI->connect($config->{dsn}, $config->{username}, $config->{password}, $attr)
             or die("Could not connect to database: $!\n");
-
     };
     if($@) {
         warn("Error trying to connect to database : ($DBI::errstr) : \$\@ : $@");
@@ -45,11 +44,6 @@ sub get_dbh
     $attr->{on_connect}->($dbh) if $attr->{on_connect};
 
     return $_DBH = $dbh;
-}
-
-sub _setup_tables {
-    my $dbh = shift;
-    $dbh->do($_) foreach Migrate::Handler->create_migrations_table_query;
 }
 
 return 1;
