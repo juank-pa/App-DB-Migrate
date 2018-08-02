@@ -19,6 +19,10 @@ sub class {
 
     my $qualified_class = class_name($class);
     eval{ load $qualified_class };
+
+    my $error_path = join('/', split('::', $qualified_class));
+    die $@ if $@ && $@ !~ /^Can't locate $error_path\.pm/;
+
     return $qualified_class unless $@;
 
     eval{ load "Migrate::\u$class" };
