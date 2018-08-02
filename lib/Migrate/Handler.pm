@@ -14,6 +14,9 @@ use feature 'say';
 our $instance;
 my $driver;
 
+# TODO:
+# * Add support to create join_tables
+
 sub new {
     bless { sql => [] }, shift;
 }
@@ -99,6 +102,10 @@ sub remove_index {
     my $index = create('index', $table, $column, $options);
     my $index_name = $index->name;
     $self->execute('DROP INDEX '.create('name', $index_name, 1));
+}
+
+sub irreversible {
+    die("Migration is irreversible!");
 }
 
 sub flush { }

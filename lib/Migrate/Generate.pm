@@ -9,41 +9,36 @@ use Migrate::Config;
 use File::Spec;
 use Data::Dumper;
 
+use constant CREATE => 'create';
+use constant DROP => 'remove';
+use constant ADD => 'add';
+use constant REMOVE => 'remove';
+
 sub execute {
     my $options = shift;
-    my $name = $options->{name} // die("Generate requires a migration name\n");
+    my $name = $options->{name} // die("Generate requires a migration name (option --name or -n)\n");
     my $path;
 
     for ($name) {
-        if (/^create_(.*)/) { $path = _generate_create_table_from_opts($1, $options) }
-        elsif (/^drop_(.*)/) { $path = generate_drop_table($1) }
-        elsif (/^add_(.*)/) { $path = generate_add_column($1) }
-        elsif (/^remove_(.*)/) { $path = generate_remove_column($1) }
-        else { generate_generic($name) }
+        if (/^(create)_(.*)/) { $path = _generate_column_from_opts($1, $2, $options) }
+        elsif (/^(drop)_(.*)/) { $path = generate_drop_table($1, $2) }
+        elsif (/^(add)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
+        elsif (/^(remove)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
+        else { $path = generate_generic($name) }
     }
 
     say("Generated file: $path") if $path;
 }
 
-sub generate_create_table {
-    my $table_name = shift;
-    my $cols = shift // [];
-    my $refs = shift // [];
-    my $timestamps = shift;
-
-    my @columns = (_serialize_columns($cols), _serialize_columns($refs, 1));
-    push(@columns, 'timestamps') if ($timestamps);
-
-    my $data = {
-        'DBADDCOLUMNS' => _join_lines(2, '$th->', @columns),
-    };
-
-    _generate_file('create', $table_name, $table_name, $data);
+sub generate_columns {
+    my $action = shift;
+    my $subject = shift;
+    my $table = _get_table_name($action, $subject);
+    my $data = _get_column_template_data($action, $table, @_);
+    _generate_file($action, $subject, $table, $data);
 }
 
-sub generate_drop_table { _generate_file('generic', "drop_$_[0]") }
-sub generate_add_column { _generate_file('generic', "add_$_[0]"); }
-sub generate_remove_column { _generate_file('generic', "remove_$_[0]") }
+sub generate_drop_table { _generate_file(@_, $_[1]) }
 sub generate_generic { _generate_file('generic', shift) }
 
 sub _join_lines {
@@ -53,30 +48,77 @@ sub _join_lines {
     return $ret.($ret? "\n" : '');
 }
 
+sub _get_table_name {
+    my $action = shift;
+    my $subject = shift;
+    return $subject if $action eq CREATE;
+    return ($subject =~ /_to_(.+)$/)[0] if $action eq ADD;
+    return ($subject =~ /_from_(.+)$/)[0];
+}
+
+sub _get_column_template_data {
+    my $action = shift;
+    my $table = shift;
+
+    my @add_columns = _get_serialized_columns(ADD, $table, @_);
+    my @remove_columns = $action ne CREATE? _get_serialized_columns(REMOVE, $table, @_) : ();
+
+    my $tabs = $action eq CREATE? 2 : 1;
+    my $handler = $action eq CREATE? 'th' : 'mh';
+
+    return {
+        'DBADDCOLUMNS' => _join_lines($tabs, "\$$handler->", @add_columns),
+        'DBREMOVECOLUMNS' => _join_lines($tabs, "\$$handler->", @remove_columns),
+    };
+}
+
+sub _get_serialized_columns {
+    my $action = shift;
+    my $table = shift;
+    my $cols = shift // [];
+    my $refs = shift // [];
+    my $timestamps = shift;
+    return (
+        _serialize_columns($action, $table, $cols),
+        _serialize_references($action, $table, $refs),
+        $timestamps? _serialize_timestamps($action, $table) : ()
+    );
+}
+
 # Private generators:
 # They receive command line options instead of hashes so they need to first
 # parse command line option strings into hashes to send them to public generator methods.
 
-sub _generate_create_table_from_opts {
-    my $table_name = shift;
+sub _generate_columns_from_opts {
+    my $action = shift;
+    my $subject = shift;
     my $options = shift;
     my @columns = _parse_columns_opts($options->{column});
     my @refs = _parse_columns_opts($options->{ref});
+    my $has_columns = scalar @columns || scalar @refs;
+    push(@columns, _get_column_from_subject($action, $subject)) if $action ne CREATE && !$has_columns;
 
-    generate_create_table($table_name, \@columns, \@refs, $options->{tstamps});
+    generate_columns($action, $subject, \@columns, \@refs, $options->{tstamps});
+}
+
+sub _get_column_from_subject {
+    my $action = shift;
+    my $subject = shift;
+    my $re = $action eq ADD? qr/(.+)_to_.+/ : qr/(.+)_from_.+/;
+    return { name => ($subject =~ /^$re$/)[0] };
 }
 
 # File generator
 
 sub _generate_file {
-    my ($action, $subject, $table_name, $data) = @_;
+    my ($action, $subject, $table, $data) = @_;
 
     my $migration_name = $action eq 'generic'? $subject : "${action}_$subject";
     my $package_name = _timestamp()."_${migration_name}";
-    my %replace = _get_replacements($table_name, $data);
+    my %replace = _get_replacements($table, $data);
 
-    my $target_path = File::Spec->catfile('db', 'migrations', "$package_name.pl");
-    my $source_path = File::Spec->catfile(Migrate::Config::library_root, 'templates', "$action.tl");
+    my $target_path = "db/migrations/$package_name.pl";
+    my $source_path = Migrate::Config::library_root."/templates/$action.tl";
 
     open(my $src, '<', $source_path) // die("Could not read template: $source_path\n");
     open(my $tgt, '>', $target_path) // die("Could not create migration: $target_path\n");
@@ -91,7 +133,6 @@ sub _generate_file {
 
 sub _get_replacements {
     my ($table_name, $data) = (shift // '', shift // {});
-    my $pk = "${table_name}_id";
     return (
         'DBTABLENAME' => $table_name,
         %$data
@@ -139,20 +180,63 @@ sub _parse_column_datatype {
 # SERIALIZER
 # Converts an array of column definition hashrefs to code lines for the generator
 
+sub _serialize_timestamps {
+    my $action = shift;
+    my $table = shift;
+    return 'timestamps' if $action eq CREATE;
+    return qq[add_timestamps('$table')] if $action eq ADD;
+    return qq[remove_timestamps('$table')];
+}
+
+sub _serialize_references { _serialize_columns(@_, 1) }
+
 sub _serialize_columns {
+    my $action = shift;
+    my $table = shift;
     my $columns = shift // return ();
     my $is_ref = shift;
-    return map { _serialize_column($_, $is_ref) // () } @$columns;
+    return map { _serialize_column($action, $table, $_, $is_ref) // () } @$columns;
 }
 
 sub _serialize_column {
-    my $options = { %{shift(@_)} };
+    my $action = shift;
+    my $table = shift;
+    my $options = shift;
     my $is_ref = shift;
-    my $column_name = delete $options->{name} // die('Column name is required');
-    my $column_type = delete $options->{type} // 'string';
+    my ($column, $datatype, $options_str) = _get_column_attributes($options);
+    return $is_ref
+        ? _serialize_reference_method($action, $table, $column, $options_str)
+        : _serialize_column_method($action, $table, $column, $datatype, $options_str);
+}
+
+sub _get_column_attributes {
+    my $options = { %{ shift(@_) } };
+    my $is_ref = shift;
+    my $column = delete $options->{name} // die('Column name is required');
+    my $datatype = delete $options->{type} // 'string';
     $options->{foreign_key} = 1 if $is_ref && Migrate::Config::config->{foreign_keys};
-    my $options_str = _serialize_column_options($options);
-    return $is_ref? qq[references('$column_name'$options_str)] : qq[$column_type('$column_name'$options_str)];
+    return ($column, $datatype, _serialize_column_options($options));
+}
+
+sub _serialize_column_method {
+    my $action = shift;
+    my $table = shift;
+    my $column = shift;
+    my $datatype = shift;
+    my $options = shift;
+    return qq[$datatype('$column'$options)] if $action eq CREATE;
+    return qq[remove_colum('$table','$column')] if $action eq REMOVE;
+    return qq[add_column('$table', '$column', '$datatype'$options)];
+}
+
+sub _serialize_reference_method {
+    my $action = shift;
+    my $table = shift;
+    my $column = shift;
+    my $options = shift;
+    return qq[references('$column'$options)] if $action eq CREATE;
+    return qq[remove_reference('$table','$column')] if $action eq REMOVE;
+    return qq[add_reference('$table', '$column'$options)];
 }
 
 sub _serialize_column_options {

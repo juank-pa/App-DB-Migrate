@@ -1,13 +1,7 @@
 sub up {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- UP SQL HERE
-EOF
-}
+{DBREMOVECOLUMNS}}
 
 sub down {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- DOWN SQL HERE
-EOF
-}
+{DBADDCOLUMNS}}

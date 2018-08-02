@@ -1,13 +1,9 @@
 sub up {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- UP SQL HERE
-EOF
+    # Place your custom up code here
 }
 
 sub down {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- DOWN SQL HERE
-EOF
+    # Place your custom down code here
 }

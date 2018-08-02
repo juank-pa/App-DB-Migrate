@@ -1,13 +1,14 @@
 sub up {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- UP SQL HERE
-EOF
+    $mh->drop_table('{DBTABLENAME}');
 }
 
 sub down {
     my ($mh, $dbh) = @_;
-    $dbh->do(<<EOF);
--- DOWN SQL HERE
-EOF
+    $mh->create_table('{DBTABLENAME}', sub {
+        my $th = shift;
+        # Add columns here
+    });
+    # You could also declare the migration irreversible:
+    # $mh->irreversible;
 }
