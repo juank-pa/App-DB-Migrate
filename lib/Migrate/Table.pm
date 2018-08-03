@@ -32,7 +32,7 @@ sub new {
 
 sub identifier { shift->{name} }
 sub name { shift->identifier->name }
-sub options { shift->{options}{options} }
+sub options { shift->{options}->{options} }
 sub is_temporary { shift->{options}{temporary} }
 sub columns { $_[0]->{columns} }
 sub temporary { }
@@ -77,11 +77,14 @@ sub references {
     $self->_push_column(reference($self->name, $column, $options));
 }
 
+sub dbspace { undef }
+
 sub to_sql {
     my $self = shift;
     my $columns = join(',', @{$self->{columns}});
     my $temporary = $self->is_temporary && $self->temporary;
-    return $self->_join_elems('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)", $self->options);
+    my $options = Migrate::Config::config->{add_options}? $self->options : undef;
+    return $self->_join_elems('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)", $self->dbspace, $options);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }

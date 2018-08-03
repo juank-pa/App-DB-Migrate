@@ -61,6 +61,8 @@ sub _columns_sql {
 
 sub _using_sql { $_[0]->using.' '.$_[0]->uses if $_[0]->uses }
 
+sub dbspace { undef }
+
 sub to_sql {
     my $self = shift;
     my $table = $self->table;
@@ -69,7 +71,8 @@ sub to_sql {
     my $name = $self->identifier;
     my $columns = $self->_columns_sql();
     my $using = undef;
-    return $self->_join_elems('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->options);
+    my $options = Migrate::Config::config->{add_options}? $self->options : undef;
+    return $self->_join_elems('CREATE', $unique, 'INDEX', $name, 'ON', $qtable, "($columns)", $using, $self->dbspace, $options);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }
