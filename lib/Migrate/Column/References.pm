@@ -27,6 +27,7 @@ sub new {
 }
 
 sub foreign_key_data { $_[0]->{options}->{foreign_key} }
+sub foreign_key_constraint { $_[0]->{fk} }
 sub table { $_[0]->{table} }
 sub raw_name { $_[0]->{raw_name} }
 
@@ -37,7 +38,9 @@ sub _add_foreign_key {
 
     $foreign_key = ref($foreign_key) eq 'HASH'? $foreign_key : {};
     my $to_table = $foreign_key->{to_table} || $self->_get_table_from_column;
-    $self->add_constraint(foreign_key($self->table, $to_table, $foreign_key));
+    my $fk = foreign_key($self->table, $to_table, $foreign_key);
+    $self->{fk} = $fk;
+    $self->add_constraint($fk);
 }
 
 sub _get_table_from_column {

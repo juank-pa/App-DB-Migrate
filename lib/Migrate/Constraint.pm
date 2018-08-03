@@ -17,7 +17,8 @@ sub new {
 
 sub constraint { 'CONSTRAINT' }
 
-sub identifier { $_[0]->{qname} //= id($_[0]->{name} || $_[0]->build_name) }
+sub identifier { $_[0]->{qname} //= id($_[0]->name) }
+sub name { $_[0]->{name} || $_[0]->build_name }
 sub build_name {}
 
 sub add_constraint { my $self = shift; unshift(@_, $self->constraint_sql); @_ }

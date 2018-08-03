@@ -14,6 +14,7 @@ sub new {
     $options //= {};
     die("Datatype is needed\n") if !defined($options->{type}) && defined($default) && ref($default) ne 'HASH';
     my $data = $class->SUPER::new($options);
+    $data->{type} = $options->{type};
     $data->{default} = $default;
     return bless($data, $class);
 }
@@ -22,7 +23,7 @@ sub current_timestamp { undef }
 sub null { 'NULL' }
 sub default { 'DEFAULT' }
 
-sub datatype { $_[0]->{options}->{type} }
+sub datatype { $_[0]->{type} }
 sub value { $_[0]->{default} }
 
 sub _hash_arg { ref($_[0]->value) eq 'HASH' && $_[0]->value->{$_[1]} }

@@ -5,7 +5,7 @@ use warnings;
 
 use parent qw(Migrate::Handler);
 
-use Migrate::Factory qw(column id);
+use Migrate::Factory qw(column reference id);
 
 # Foreign keys are automatically indexed in Informix so there is no need to index them again.
 sub _add_indexes {
@@ -31,12 +31,16 @@ sub rename_column {
 
 sub add_foreign_key {
     my ($self, $table, $to, $options) = @_;
-    $self->execute('ALTER TABLE table ADD CONSTRAINT FOREIGN KEY (from_col) REFERENCES table (to_col) CONSTRAINT');
+    my $col = reference($table, $to, { foreign_key => $options // 1 });
+    my $fk = $col->foreign_key_constraint;
+    $self->execute('ALTER TABLE '.id($table, 1).' ADD CONSTRAINT FOREIGN KEY ('.$col->name.') REFERENCES '.$fk->to_table.' ('.$fk->column.') CONSTRAINT '.$fk->name);
 }
 
 sub remove_foreign_key {
     my ($self, $table, $to, $options) = @_;
-    $self->execute('ALTER TABLE table DROP CONSTRAINT FOREIGN KEY constraint_name');
+    my $col = reference($table, $to, { foreign_key => $options // 1 });
+    my $fk = $col->foreign_key_constraint;
+    $self->execute('ALTER TABLE '.id($table, 1).' DROP CONSTRAINT '.$fk->name);
 }
 
 sub change_column {

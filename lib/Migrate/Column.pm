@@ -23,7 +23,7 @@ sub new {
     my $col = bless($data, $class);
 
     $col->add_constraint(null($options->{null})) if exists($options->{null});
-    $col->add_constraint(default($options->{default}, $col->type)) if exists($options->{default});
+    $col->add_constraint(default($options->{default}, { type => $col->type })) if exists($options->{default});
 
     return $col;
 }

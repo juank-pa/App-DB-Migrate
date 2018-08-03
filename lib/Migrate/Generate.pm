@@ -205,7 +205,7 @@ sub _serialize_column {
     my $table = shift;
     my $options = shift;
     my $is_ref = shift;
-    my ($column, $datatype, $options_str) = _get_column_attributes($options);
+    my ($column, $datatype, $options_str) = _get_column_attributes($options, $is_ref);
     return $is_ref
         ? _serialize_reference_method($action, $table, $column, $options_str)
         : _serialize_column_method($action, $table, $column, $datatype, $options_str);

@@ -5,7 +5,7 @@ use warnings;
 
 use Migrate::Config;
 use Migrate::Util;
-use Migrate::Factory qw(column timestamp table_index table id);
+use Migrate::Factory qw(column timestamp table_index table id reference);
 use Migrate::Dbh qw{get_dbh};
 use DBI;
 
@@ -92,7 +92,7 @@ sub remove_columns {
 sub remove_reference {
     my ($self, $table, $name, $options) = @_;
     my $id_name = (ref($options->{foreign_key}) eq 'HASH' && $options->{foreign_key}->{column}) || "${name}_id";
-    $self->remove_colum($table, $id_name);
+    $self->remove_column($table, $id_name);
 }
 
 sub remove_timestamps { $_[0]->remove_columns($_[1], 'created_at', 'updated_at') }
