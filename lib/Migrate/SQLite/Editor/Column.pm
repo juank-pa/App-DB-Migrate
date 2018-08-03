@@ -25,13 +25,13 @@ sub rename {
     $self->{name} = $to;
 }
 
-sub datatype { $_[0]->{datatype} }
+sub type { $_[0]->{datatype} }
 sub constraints { $_[0]->{constraints} }
 
 sub change_datatype {
     my ($self, $datatype, $options) = @_;
-    my $prev_datatype = $self->datatype;
-    my $datatype_obj = create('datatype', $datatype, $options);
+    my $prev_datatype = $self->type;
+    my $datatype_obj = datatype($datatype, $options);
     return if $datatype eq $prev_datatype->name && $datatype_obj->build_attrs() eq $prev_datatype->attrs_sql;
 
     $self->{datatype} = parse_datatype($datatype_obj);
@@ -72,8 +72,8 @@ sub change_default {
     my $prev_default = $self->default;
     return if !$prev_default && !defined($default);
 
-    my $datatype = create('datatype', $Migrate::SQLite::Editor::Datatype::datatypes{$self->datatype // ''} || 'string');
-    my $default_obj = create('Constraint::Default', $default, { type => $datatype });
+    my $datatype = datatype($Migrate::SQLite::Editor::Datatype::datatypes{$self->type // ''} || 'string');
+    my $default_obj = default($default, { type => $datatype });
     if ($prev_default) {
         if (defined $default) { $self->_update_default($prev_default, $default_obj) }
         else { $self->_remove_constraint('default') }
@@ -97,7 +97,7 @@ sub has_foreign_key { $_[0]->_select_constraint('references') }
 sub add_foreign_key {
     my ($self, $from, $to, $options) = @_;
     return if $self->has_foreign_key;
-    my $fk_obj = create('Constraint::ForeignKey', $from, $to, $options);
+    my $fk_obj = foreign_key($from, $to, $options);
     push @{ $self->{constraints} }, parse_constraint($fk_obj);
     return 1;
 }
@@ -106,7 +106,7 @@ sub remove_foreign_key { $_[0]->_remove_constraint('references') }
 
 sub to_sql {
     my $self = shift;
-    my @elems = ($self->quoted_name, $self->datatype, @{ $self->constraints });
+    my @elems = ($self->quoted_name, $self->type, @{ $self->constraints });
     return Migrate::Util::join_elems(@elems);
 }
 

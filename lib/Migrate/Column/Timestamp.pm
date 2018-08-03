@@ -5,13 +5,13 @@ use warnings;
 
 use parent qw(Migrate::SQLizable);
 
-use Migrate::Factory qw(create);
+use Migrate::Factory qw(column);
 
 sub new {
     my ($class, $name, $options) = @_;
     my $new_options = { default => { timestamp => 1 } };
     $new_options->{null} = $options->{null} if $options && defined($options->{null});
-    my $col = create('column', $name, 'datetime', $new_options);
+    my $col = column($name, 'datetime', $new_options);
     return bless({ column => $col }, $class);
 }
 

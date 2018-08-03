@@ -6,7 +6,7 @@ use warnings;
 BEGIN {
     use Exporter;
     our @ISA = qw{Exporter};
-    our @EXPORT_OK = qw(class create);
+    our @EXPORT_OK = qw(class create column id reference timestamp table table_index null default datatype foreign_key handler id_column primary_key);
 }
 
 use Module::Load;
@@ -31,5 +31,20 @@ sub class {
 }
 
 sub create { class(shift)->new(@_) }
+
+sub id { create('identifier', @_) }
+sub column { create('column', @_) }
+sub reference { create('Column::References', @_) }
+sub timestamp { create('Column::Timestamp', @_) }
+sub id_column { create('Column::PrimaryKey', @_) }
+sub table { create('table', @_) }
+sub table_index { create('index', @_) }
+sub datatype { create('datatype', @_) }
+
+sub null { create('Constraint::Null', @_) }
+sub default { create('Constraint::Default', @_) }
+sub foreign_key { create('Constraint::ForeignKey', @_) }
+sub primary_key { create('Constraint::PrimaryKey', @_) }
+sub handler { create('handler', @_) }
 
 return 1;

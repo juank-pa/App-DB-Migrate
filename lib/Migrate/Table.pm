@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Scalar::Util qw(looks_like_number);
-use Migrate::Factory qw(class create);
+use Migrate::Factory qw(class id id_column column reference);
 use Migrate::Util;
 
 # TODO:
@@ -23,9 +23,9 @@ sub new {
         columns => []
     };
 
-    $data->{name} = create('identifier', $name, 1);
+    $data->{name} = id($name, 1);
     my $table = bless($data, $class);
-    $table->primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
+    $table->push_primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
         if !exists($options->{id}) || $options->{id};
     return $table;
 }
@@ -54,7 +54,7 @@ sub _shorthand_handler {
     my $datatype = shift;
     my $options;
     $options = pop if ref($_[-1]) eq 'HASH';
-    $self->column($_, $datatype, $options) for @_;
+    $self->push_column($_, $datatype, $options) for @_;
 }
 
 sub AUTOLOAD {
@@ -64,17 +64,17 @@ sub AUTOLOAD {
     goto &$meth_ref;
 }
 
-sub column { shift->_push_column(create('column', @_)) }
-sub primary_key { my $self = shift; $self->_push_column(create('Column::PrimaryKey', $self->name, @_)) }
+sub push_column { shift->_push_column(column(@_)) }
+sub push_primary_key { my $self = shift; $self->_push_column(id_column($self->name, @_)) }
 
 sub timestamps {
     my $self = shift;
-    $self->_push_column(create('Column::Timestamp', "${_}_at", @_)) for qw(updated created);
+    $self->_push_column(timestamp("${_}_at", @_)) for qw(updated created);
 }
 
 sub references {
     my ($self, $column, $options) = @_;
-    $self->_push_column(create('Column::References', $self->name, $column, $options));
+    $self->_push_column(reference($self->name, $column, $options));
 }
 
 sub to_sql {

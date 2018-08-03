@@ -5,7 +5,7 @@ use warnings;
 
 use Migrate::Config;
 use Migrate::Util;
-use Migrate::Factory qw(create);
+use Migrate::Factory qw(column timestamp table_index table id);
 use Migrate::Dbh qw{get_dbh};
 use DBI;
 
@@ -35,7 +35,7 @@ sub execute {
 sub create_table {
     my ($self, $name, $options, $sub) = @_;
     ($sub, $options) = ($options, undef) if ref($options) eq 'CODE';
-    my $table = create('table', $name, $options);
+    my $table = table($name, $options);
 
     $sub->($table);
     $self->execute($table);
@@ -53,35 +53,35 @@ sub _get_index_options { $_[1]->index if ref($_[1]->index) eq 'HASH' }
 
 sub add_column {
     my ($self, $table, $column, $datatype, $options) = @_;
-    return $self->add_raw_column($table, create('column', $column, $datatype, $options));
+    return $self->add_raw_column($table, column($column, $datatype, $options));
 }
 
 sub add_reference {
     my ($self, $table, $ref_name, $options) = @_;
-    return $self->add_raw_column($table, create('Column::References', $table, $ref_name, $options));
+    return $self->add_raw_column($table, reference($table, $ref_name, $options));
 }
 
 sub add_timestamps {
     my ($self, $table, $options) = @_;
-    $self->add_raw_column($table, create('Column::Timestamp', 'updated_at', $options));
-    return $self->add_raw_column($table, create('Column::Timestamp', 'created_at', $options));
+    $self->add_raw_column($table, timestamp('updated_at', $options));
+    return $self->add_raw_column($table, timestamp('created_at', $options));
 }
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
-    $self->execute('ALTER TABLE '.create('identifier', $table, 1).' ADD '.$column);
+    $self->execute('ALTER TABLE '.id($table, 1).' ADD '.$column);
 }
 
-sub add_index { shift->execute(create('index', @_)) }
+sub add_index { shift->execute(table_index(@_)) }
 
 sub drop_table {
     my ($self, $table) = @_;
-    $self->execute('DROP TABLE '.create('identifier', $table, 1));
+    $self->execute('DROP TABLE '.id($table, 1));
 }
 
 sub remove_column {
     my ($self, $table, $column) = @_;
-    $self->execute('ALTER TABLE '.create('identifier', $table, 1)." DROP $column");
+    $self->execute('ALTER TABLE '.id($table, 1)." DROP $column");
 }
 
 sub remove_columns {
@@ -99,9 +99,9 @@ sub remove_timestamps { $_[0]->remove_columns($_[1], 'created_at', 'updated_at')
 
 sub remove_index {
     my ($self, $table, $column, $options) = @_;
-    my $index = create('index', $table, $column, $options);
+    my $index = table_index($table, $column, $options);
     my $index_name = $index->name;
-    $self->execute('DROP INDEX '.create('identifier', $index_name, 1));
+    $self->execute('DROP INDEX '.id($index_name, 1));
 }
 
 sub irreversible {

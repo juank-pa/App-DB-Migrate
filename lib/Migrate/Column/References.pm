@@ -5,7 +5,7 @@ use warnings;
 
 use Lingua::EN::Inflexion qw(noun verb);
 
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(foreign_key);
 use Migrate::Util;
 
 use parent qw(Migrate::Column);
@@ -37,7 +37,7 @@ sub _add_foreign_key {
 
     $foreign_key = ref($foreign_key) eq 'HASH'? $foreign_key : {};
     my $to_table = $foreign_key->{to_table} || $self->_get_table_from_column;
-    $self->add_constraint(create('Constraint::ForeignKey', $self->table, $to_table, $foreign_key));
+    $self->add_constraint(foreign_key($self->table, $to_table, $foreign_key));
 }
 
 sub _get_table_from_column {

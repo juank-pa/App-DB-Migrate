@@ -3,7 +3,7 @@ package Migrate::Column;
 use strict;
 use warnings;
 
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(null default datatype);
 use Migrate::Util;
 
 use overload
@@ -15,22 +15,22 @@ sub new {
     my $datatype_options = $class->_extract_datatype_options($options);
     my $data = {
         name => $name || die("Column name is needed\n"),
-        datatype => create('datatype', $datatype, $datatype_options),
+        datatype => datatype($datatype, $datatype_options),
         options => $options // {},
         constraints => []
     };
 
     my $col = bless($data, $class);
 
-    $col->add_constraint(create('Constraint::Null', $options->{null})) if exists($options->{null});
-    $col->add_constraint(create('Constraint::Default', $options->{default}, $col->datatype)) if exists($options->{default});
+    $col->add_constraint(null($options->{null})) if exists($options->{null});
+    $col->add_constraint(default($options->{default}, $col->type)) if exists($options->{default});
 
     return $col;
 }
 
 sub name { $_[0]->{name} }
 sub options { $_[0]->{options} }
-sub datatype { $_[0]->{datatype} }
+sub type { $_[0]->{datatype} }
 sub constraints { $_[0]->{constraints} }
 sub index { $_[0]->options->{index} }
 
@@ -45,7 +45,7 @@ sub to_sql {
     my $self = shift;
     return $self->_join_elems(
         $self->name,
-        $self->datatype,
+        $self->type,
         @{$self->constraints}
     );
 }

@@ -2,7 +2,7 @@ package Migrate::Index;
 
 use parent qw(Migrate::SQLizable);
 
-use Migrate::Factory qw(create);
+use Migrate::Factory qw(id);
 
 # TODO:
 # * Revisit using (not supported everywhere, and position)
@@ -21,7 +21,7 @@ sub new {
 sub name { $_[0]->identifier->name }
 sub identifier {
     my $self = shift;
-    $self->{qname} //= create('identifier',
+    $self->{qname} //= id(
         $self->{options}->{name} // 'idx_'.$self->table.'_'.$self->_column_list_name, 1
     );
 }

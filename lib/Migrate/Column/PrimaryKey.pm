@@ -5,7 +5,7 @@ use warnings;
 
 use parent qw(Migrate::SQLizable);
 
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(primary_key column class);
 use Migrate::Config;
 
 sub new {
@@ -16,14 +16,14 @@ sub new {
     my $datatype = class('datatype')->is_valid_datatype($options->{type})?
         $options->{type} : $class->default_datatype;
 
-    my $col = create('column', $column || Migrate::Config::id($table), $datatype, $options);
+    my $col = column($column || Migrate::Config::id($table), $datatype, $options);
 
     my $autoincrement = $options->{autoincrement};
     my $pk_options = {};
     $pk_options->{autoincrement} = 1 if $autoincrement && !!grep(/^$datatype$/, $class->autoincrement_types);
     $pk_options->{name} = $options->{name} if $options->{name};
 
-    $col->{pk} = create('Constraint::PrimaryKey', $table, $col->name, $pk_options);
+    $col->{pk} = primary_key($table, $col->name, $pk_options);
     $col->add_constraint($col->{pk});
     return bless { table => $table, column => $col }, $class;
 }

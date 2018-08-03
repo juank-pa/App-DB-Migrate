@@ -5,7 +5,7 @@ use warnings;
 use feature 'say';
 
 use Migrate::Dbh qw(get_dbh);
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(handler class);
 use Data::Dumper;
 use List::Util qw(min);
 
@@ -44,7 +44,7 @@ sub _filtered_migrations {
 sub _run_migration {
     my $migration = shift;
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
-    my $handler = create('handler');
+    my $handler = handler();
 
     _load_migration($migration->{path}, $migration->{package});
 
