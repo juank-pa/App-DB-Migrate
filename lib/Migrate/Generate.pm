@@ -163,7 +163,7 @@ sub _parse_column_opts {
         elsif ($_ eq 'unique') { $options->{index} = { unique => 1 } }
         else {
             my ($datatype, @props) = split(',', $_);
-            _parse_column_datatype($options, $datatype, @props) if $datatype =~ /^$datatypes$/;
+            _parse_column_datatype($options, $datatype, @props) if $datatype =~ /^(?:$datatypes)$/;
         }
     }
 
@@ -175,7 +175,7 @@ sub _parse_column_datatype {
     my ($type, @props) = @_;
     $options->{type} = $type;
     if (@props) {
-        $options->{limit} = $props[0] if scalar(@attrs) == 1;
+        $options->{limit} = $props[0] if scalar(@props) == 1;
         @$options{'precision', 'scale'} = @props if scalar(@props) > 1;
     }
 }
