@@ -156,13 +156,15 @@ sub _parse_column_opts {
     my $column_name = shift(@column_data) // die('Column name is required');
     my $options = { name => $column_name };
     my $datatypes = join('|', keys(%{ Migrate::Factory::class('datatype')->datatypes }));
-    my $datatype_regex = qr/^($datatypes)(\d+(?:,\d+)*)?$/;
 
-    foreach(@column_data) {
+    foreach (@column_data) {
         if ($_ eq 'not_null') { $options->{null} = 0 }
         elsif ($_ eq 'index') { $options->{index} = 1 }
         elsif ($_ eq 'unique') { $options->{index} = { unique => 1 } }
-        elsif (/$datatype_regex/) { _parse_column_datatype($options, $1, $2) }
+        else {
+            my ($datatype, @props) = split(',', $_);
+            _parse_column_datatype($options, $datatype, @props) if $datatype =~ /^$datatypes$/;
+        }
     }
 
     return $options;
@@ -170,12 +172,11 @@ sub _parse_column_opts {
 
 sub _parse_column_datatype {
     my $options = shift;
-    my ($type, $props) = @_;
+    my ($type, @props) = @_;
     $options->{type} = $type;
-    if ($props) {
-        my @attrs = split(',', $props);
-        $options->{limit} = $attrs[0] if scalar(@attrs) == 1;
-        @$options{'precision', 'scale'} = @attrs if scalar(@attrs) > 1;
+    if (@props) {
+        $options->{limit} = $props[0] if scalar(@attrs) == 1;
+        @$options{'precision', 'scale'} = @props if scalar(@props) > 1;
     }
 }
 
