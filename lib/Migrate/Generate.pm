@@ -20,7 +20,7 @@ sub execute {
     my $path;
 
     for ($name) {
-        if (/^(create)_(.*)/) { $path = _generate_column_from_opts($1, $2, $options) }
+        if (/^(create)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
         elsif (/^(drop)_(.*)/) { $path = generate_drop_table($1, $2) }
         elsif (/^(add)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
         elsif (/^(remove)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
@@ -60,7 +60,7 @@ sub _get_column_template_data {
     my $action = shift;
     my $table = shift;
 
-    my @add_columns = _get_serialized_columns(ADD, $table, @_);
+    my @add_columns = _get_serialized_columns($action eq REMOVE? ADD : $action, $table, @_);
     my @remove_columns = $action ne CREATE? _get_serialized_columns(REMOVE, $table, @_) : ();
 
     my $tabs = $action eq CREATE? 2 : 1;
