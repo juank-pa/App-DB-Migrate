@@ -64,6 +64,12 @@ migrate generate -n my_migration_name
 The above example generates a migration file named *YYYYMMDDhhmmss_my_migration.pl* were *YYYYMMDDhhmmss* refers
 to the current timestamp followed by the name you specified. The command prints the path of the newly generated file.
 
+You can further modify the generated perl file to perform additional actions or detail you migration even more. The `up`
+and `down` functions receive two parameters: the migrate handler object `$mh` that provides an API to modify the
+database, and a DBI database handler `$dbh` that will allow running custom/advanced SQL commands or even query existing
+data so you can migrate the current data to a new format as well. For detailed documentation on the handler API read the
+wiki [migrate handler page](https://github.com/juank-pa/Perl-Migrate/wiki/The-Migrate-API).
+
 ### The name IS important!
 A command like the previous one generates a file based on a generic template, and you'll have to write your migration
 code completely from scratch. But there are certain migration *magic* names that will use other helpful templates.
@@ -143,4 +149,18 @@ The status can be any of the following:
 
 If instead of printing a user friendly migration name you prefer a file path use the `--file` or `-f` option.
 
-To be continued...
+## The run action
+Once we have our migrations in place is time to run them. Use the run action to execute all the migrations that have not been yet executed. You'll get a report of all the SQL statements that ran successfully. Every migration is executed as a transaction so if you get a failure in the middle of a migration the whole migration will be cancelled altogether and a report of the error will be printed to the console.
+
+Syntax:
+```bash
+migrate run
+```
+
+## The rollback action
+If you need to undo the last ran migration you can use the rollback action. The rollback action will only undo one migration at a time. If you want to undo more than one migration use the `--steps` or `-s` option specifying the amount of migrations to undo.
+
+Syntax:
+```bash
+migrate rollback
+```
