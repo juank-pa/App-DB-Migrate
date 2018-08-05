@@ -10,7 +10,7 @@ use File::Spec;
 use Data::Dumper;
 
 use constant CREATE => 'create';
-use constant DROP => 'remove';
+use constant DROP => 'drop';
 use constant ADD => 'add';
 use constant REMOVE => 'remove';
 
@@ -18,12 +18,10 @@ sub execute {
     my $options = shift;
     my $name = $options->{name} // die("Generate requires a migration name (option --name or -n)\n");
     my $path;
+    my $actions = join '|', (CREATE, DROP, ADD, REMOVE);
 
     for ($name) {
-        if (/^(create)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
-        elsif (/^(drop)_(.*)/) { $path = generate_drop_table($1, $2) }
-        elsif (/^(add)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
-        elsif (/^(remove)_(.*)/) { $path = _generate_columns_from_opts($1, $2, $options) }
+        if (/^($actions)_(.*)$/) { $path = _generate_columns_from_opts($1, $2, $options) }
         else { $path = generate_generic($name) }
     }
 
@@ -51,7 +49,7 @@ sub _join_lines {
 sub _get_table_name {
     my $action = shift;
     my $subject = shift;
-    return $subject if $action eq CREATE;
+    return $subject if _is_table_action($action);
     return ($subject =~ /_to_(.+)$/)[0] if $action eq ADD;
     return ($subject =~ /_from_(.+)$/)[0];
 }
@@ -60,14 +58,14 @@ sub _get_column_template_data {
     my $action = shift;
     my $table = shift;
 
-    my @add_columns = _get_serialized_columns($action eq REMOVE? ADD : $action, $table, @_);
-    my @remove_columns = $action ne CREATE? _get_serialized_columns(REMOVE, $table, @_) : ();
+    my @add_columns = _get_serialized_columns(_is_table_action($action)? $action : ADD, $table, @_);
+    my @remove_columns = _is_table_action($action)? () : _get_serialized_columns(REMOVE, $table, @_);
 
     @add_columns = reverse @add_columns if $action eq REMOVE;
     @remove_columns = reverse @remove_columns if $action eq ADD;
 
-    my $tabs = $action eq CREATE? 2 : 1;
-    my $handler = $action eq CREATE? 'th' : 'mh';
+    my $tabs = _is_table_action($action)? 2 : 1;
+    my $handler = _is_table_action($action)? 'th' : 'mh';
 
     return {
         'DBADDCOLUMNS' => _join_lines($tabs, "\$$handler->", @add_columns),
@@ -92,6 +90,8 @@ sub _get_serialized_columns {
 # They receive command line options instead of hashes so they need to first
 # parse command line option strings into hashes to send them to public generator methods.
 
+sub _is_table_action { $_[0] eq CREATE || $_[0] eq DROP }
+
 sub _generate_columns_from_opts {
     my $action = shift;
     my $subject = shift;
@@ -100,7 +100,7 @@ sub _generate_columns_from_opts {
     my @refs = _parse_columns_opts($options->{ref});
     my $has_columns = scalar @columns || scalar @refs;
     my $has_timestamps = $options->{tstamps};
-    my $infer_column = $action ne CREATE && !$has_columns && !$has_timestamps;
+    my $infer_column = !_is_table_action($action) && !$has_columns && !$has_timestamps;
     push(@columns, _get_column_from_subject($action, $subject)) if $infer_column;
 
     generate_columns($action, $subject, \@columns, \@refs, $options->{tstamps});
@@ -189,7 +189,7 @@ sub _parse_column_datatype {
 sub _serialize_timestamps {
     my $action = shift;
     my $table = shift;
-    return 'timestamps' if $action eq CREATE;
+    return 'timestamps' if _is_table_action($action);
     return qq[add_timestamps('$table')] if $action eq ADD;
     return qq[remove_timestamps('$table')];
 }
@@ -230,7 +230,7 @@ sub _serialize_column_method {
     my $column = shift;
     my $datatype = shift;
     my $options = shift;
-    return qq[$datatype('$column'$options)] if $action eq CREATE;
+    return qq[$datatype('$column'$options)] if _is_table_action($action);
     return qq[remove_column('$table','$column')] if $action eq REMOVE;
     return qq[add_column('$table', '$column', '$datatype'$options)];
 }
@@ -240,7 +240,7 @@ sub _serialize_reference_method {
     my $table = shift;
     my $column = shift;
     my $options = shift;
-    return qq[references('$column'$options)] if $action eq CREATE;
+    return qq[references('$column'$options)] if _is_table_action($action);
     return qq[remove_reference('$table','$column')] if $action eq REMOVE;
     return qq[add_reference('$table', '$column'$options)];
 }
