@@ -43,6 +43,7 @@ The standard configuration options are:
 * **attr:** Additional DBI connection properties expected by the specific driver in use.
 * **on_connect:** Is an anonymous function that will run immediately after a DB conection has been stablished. It
   receives the created `$dbh` object and will allow further customizations to the database connection.
+* **id:** Is an anonymous function that receives a pluralized and singularized table name as parameters, and must return the primary key column name. This function is called prior to adding a primary key to a table to determine the column name. If the option is not provided then a primary key columns will be named `id`.
 * **foreign_keys:** If set to true it will force the generation of foreign keys for reference columns. The default
   value is false. See the [generate action](#the-generate-action) documentation for further info.
 * **add_options:** If set to true it will add additional SQL options after a CREATE TABLE definition as specified by
