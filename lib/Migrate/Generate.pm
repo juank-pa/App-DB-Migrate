@@ -63,6 +63,9 @@ sub _get_column_template_data {
     my @add_columns = _get_serialized_columns($action eq REMOVE? ADD : $action, $table, @_);
     my @remove_columns = $action ne CREATE? _get_serialized_columns(REMOVE, $table, @_) : ();
 
+    @add_columns = reverse @add_columns if $action eq REMOVE;
+    @remove_columns = reverse @remove_columns if $action eq ADD;
+
     my $tabs = $action eq CREATE? 2 : 1;
     my $handler = $action eq CREATE? 'th' : 'mh';
 
