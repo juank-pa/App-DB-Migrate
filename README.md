@@ -1,110 +1,166 @@
-# Perl:Migrate (WIP)
-**Note:** This is a work in progress. Not even a MVP status is yet achieved.
+# Migrate
 
-This library allows managing DB migrations with the command line. I was mostly inspired in
-the Ruby on Rails migration system. While there are other libraries out there that achieve this, they
-come bundled with ORMs and other larger frameworks. I needed something minimal that could be used
-independently (regardless of other framewors you might use) and that it was as simple to install
-in systems with restricted access.
+This library allows managing DB migrations using the command line. While there are other libraries out
+there that achieve this, they either come bundled with ORMs and other larger frameworks, or are SQL based
+making them DBMS dependant.
 
-MVP will start handling SQL commands directly trying to be as generic as possible but I'll try to
-make it in such a way we could support the most common DBMs out there.
+The inspiration behind Migrate was to create a migration system that simplifies the variety of DBMS SQL
+language variations into a simple perl-based language that allows handling DB schema changes, without
+removing the ability to write SQL commands for specific/advanced tasks completely.
 
-## Current limitations
-1. I just started supporting Informix DB which I'm using at the time. I pretend to write adapters for
-   the most common DBMSs.
-2. The first MVP will be SQL based so it will be somewhat limiting and a bit less readable. After that I
-   plan to support a programmatic API that will handle db creation and manipulation.
+The library uses a plugin paradigm allowing the creation of a plugin for any given DBI driver.
 
-## Setup
-This command requires access to a DBMS to allow running the migrations into it and to store migration
-tracking information.
+The command line tool can perform five different actions: `setup`, `status`, `generate`, `run` and `rollback`.
 
-To setup the command you'll need to export the following environment variables with the information
-required to connect to the DBMS:
+## The setup action
+
+This is the first command action you'll have to execute before any other action. If you try to use other actions
+before setting migrate up your receive a message prompting you to run setup first.
+
+The setup command creates a `db` folder under the current directory. This `db` folder will contain the DB config
+file as well as the migrations you'll generate with the [generate action](#the-generate-action). It will actually create two files:
+`db/config.pl`, and `db/config.example.pl`. The `db/config.pl` file is properly excluded from a git repo using a 
+`.gitignore` file.
+
+You need to edit `db/config.pl` file to configure the database DSN and additional connection properties. The 
+`db/config.example.pl` will be uploaded to your repo and will serve as a template for other developers to use as
+their `db/config.pl` file.
+
+Running the `setup` action again will have no effect. Nevertheless, running the `setup` action when only the
+`db/config.pl` file is missing will use the existing `db/config.example.pl` as a template.
+
+Syntax:
 
 ```bash
-MS_SCHEMA=<db_scema>
-MS_USER=<db_user_name>
-MS_PASS=<db_user_password>
-MS_DSN=<db_data_source>
+migrate setup
 ```
 
-The DSN must be formated as expected by DBI: `dbi:<Driver>:...`
+The standard configuration options are:
 
-## The Perl migrate command
-The `migrate` command won't do anything by itself, you should call it passing an additional action to perform.
-Valid actions are `generate`, `run`, `rollback` and `status`.
+* **dsn:** The database DSN string as expected by the DBI library.
+* **username:** The username used to connect to the database.
+* **password:** The password used to connect to the database.
+* **attr:** Additional DBI connection properties expected by the specific driver in use.
+* **on_connect:** Is an anonymous function that will run immediately after a DB conection has been stablished. It
+  receives the created `$dbh` object and will allow further customizations to the database connection.
+* **foreign_keys:** If set to true it will force the generation of foreign keys for reference columns. The default
+  value is false. See the [generate action](#the-generate-action) documentation for further info.
+* **add_options:** If set to true it will add additional SQL options after a CREATE TABLE definition as specified by
+  the `create_table` method `options` key. If false, table options will be ignored and will not be added to the
+  generated SQL command. The default value is false. For more information see the `create_table` method documentation.
 
-### The generate command
-The generate command allows generating a perl module with two subroutines `up` and `down`. Up will
-execute commands to perform the migration while down will have rollback commands.
-The only mandatory option is `-n` to specify the name of the migration:
+Additional configuration options can be available depending on the migrate plugin implementation.
+
+## The generate action
+
+Once the DB connection is setup correctly you can start creating migrations. The `generate` action will allow
+you to do just that. The basic syntax will receive a (`--name`or `-n`) parameter and will generate a perl file
+under the `db/migrations` containing an `up` and `down` functions you'll use to add your migration code.
 
 ```bash
 migrate generate -n my_migration_name
 ```
 
-The above example generates a `migrations` folder under the current folder and will also create a file
-named *YYYYMMDDhhmmss_my_migration.pl* were *YYYYMMDDhhmmss* refers to the current timestamp. The command
-prints the path of the newly generated file.
+The above example generates a migration file named *YYYYMMDDhhmmss_my_migration.pl* were *YYYYMMDDhhmmss* refers
+to the current timestamp followed by the name you specified. The command prints the path of the newly generated file.
 
-#### The name IS important!
-If you use a command like the previous one a generic template will be created, and you'll have to
-write your migration from scratch. But there are certain migration names that will create other helpful templates.
+You can further modify the generated perl file to perform additional actions or detail you migration even more. The `up`
+and `down` functions receive two parameters: the migrate handler object `$mh` that provides an API to modify the
+database, and a DBI database handler `$dbh` that will allow running custom/advanced SQL commands or even query existing
+data so you can migrate the current data to a new format as well. For detailed documentation on the handler API read the
+wiki [migrate handler page](https://github.com/juank-pa/Perl-Migrate/wiki/The-Migrate-API).
 
-#### create_table_<singular_table_name>
-This prefix will create a template prepopulated with a `create_table` (and the corresponding `drop_table` in down)
-command and will use the rest of the migration name as the table name. The table name must be in singular form
-(this is important).
+### The name IS important!
+A command like the previous one generates a file based on a generic template, and you'll have to write your migration
+code completely from scratch. But there are certain migration *magic* names that will use other helpful templates.
 
-*The -c option*
+* **create_<table_name>:** This migration will use a template prepopulated with a `create_table` statement and will use
+  the rest of the migration name as the table name to create.
+* **add_<column_name>\_to\_<table_name>:** This migration will use a template prepopulated with an `add_column` statement
+  and will use the rest of the migration name as the column and table names correspondingly.
+* **drop_<table_name>:** This migration will use a template prepopulated with a `drop_table` statement and will use
+  the rest of the migration name as the table name to drop.
+* **remove_<column_name>\_from\_<table_name>:** This migration will use a template prepopulated with a `remove_column`
+  statement and will use the rest of the migration name as the column and table names correspondingly.
 
-You can add columns from the same command line by using the `-c [columns]` option. Where columns is a quoted space
-separated list of column for you table. e.g. `-c 'age name'`. This option has the following syntax:
+All magic names will also add the corresponding `down` actions. Additionally, every magic name can receive further
+options so that they can prepopulate more than just the table name. Take into account the generated files are just
+templates which can be further customized later.
+
+### The --column or -c option
+
+The `-c` option adds a column to a `create_..` or `drop_...` migration and allows better specifying column properties
+for `add_..._to_...` or `remove_..._from_...`. This option has the following syntax:
 
 ```bash
--c 'column_name[:datatype[(s,...)]][:not_null|:null][:index|:unique][ ...more_columns]'
+-c column_name[:datatype][:not_null][:index|:unique]
 ```
 
-Additional colon separated column properties can be added for each column in any order as long as the column name is
-always first. Available column properties are:
+Available column properties are:
 
-* *datatype:* available datatypes are: `string`, `char`, `text`, `integer`, `float`, `decimal`, `date`, and `datetime`.
-  These types map to SQL types depending on the driver e.g. `string` maps to `CHARVAR` on most DBMS. Datatypes can
-  receive size and precision attributes in parenthesis e.g. `integer(20)`. If datatype is not specified `string` is used
-  by default.
-* *not_null or null:* They specify whether the column is `null` or `not_null`. If not specified `null` is used.
-* *index or unique:* They specify whether to add a index or a unique index to the column. No index is added otherwise.
+* **datatype:** The list of available datatypes can vary for each Driver implementation but at the bare minimum all drivers
+  implement: `string`, `char`, `text`, `integer`, `bigint`, `float`, `decimal`, `numeric`, `date`, `time`, `datetime`, 
+  `binary` and `boolean`. These types map to specific driver SQL datatypes e.g. `string` maps to `CHARVAR` on most DBMSs.
+  Datatypes can add comma separated size and precision attributes e.g. `float,20,3`. If datatype is not specified `string`
+  is used by default.
+* **not_null:** They specify a column as being NOT NULL.
+* **index or unique:** They specify whether to add a index or a unique index to the column. No index is added otherwise.
+
+You can add as many columns as you desire by using the `-c` option many times.
 
 Example:
 
 ```bash
-migrate generate -n create_table_employee -c 'name:string:not_null age:integer:index email:unique'
+migrate generate -n create_employee -c name:string,60:not_null -c age:integer:index -c email:unique
 ```
 
-*The -r option*
+### The --ref or -r option
 
-The `-r [singular_table_names]` option is very similar to the columns option but instead of receiving column names
-it receives table names in singular form to create references (foreign keys) to those tables. You can use the
-same column properties you use for the `-c` option. If `datatype` is not specified `integer` is used by default.
-This option has the following syntax:
+The `-r` option is very similar to the `-c` option but generates a reference column instead. The generated SQL column
+name will be `<column_name>_id`, with an `integer` datatype by default. All this can be further customized if desired
+by editing the generated migration file (do not add the `_id` suffix). This option has the following syntax:
 
 ```bash
--r 'singular_table_name[:datatype[(s,...)]][:not_null|:null][:index|:unique][ ...more_table_names]'
+-r column_name[:datatype][:not_null][:index]
 ```
 
-### The status command
+Refer to the [`-c` option](#the---column-or--c-option) to get more information on the properties.
 
-The status command will print a list of all known migrations. Every migration shows a status, the
+References do not create foreign keys by default. To force this, simply add the `{ foreign_key => 1 }` options to the 
+generated column code or setup the `foreign_keys` key in the `db/config.pl` file (see the [setup action](#the-setup-action)). 
+The foreign key will reference the `id` column of a `<plural_column_name>` table by default but this can be further
+customized as well.
+
+### The --tstamps or -t option
+
+This options adds a timestamps method call that will ultimately create a `created_at` and `updated_at` columns to the
+table. This columns use the `datetime` datatype.
+
+## The status action
+
+The status action will print a list of all known migrations. Every migration shows a status, the
 migration timestamp and its user friendly name.
 
 The status can be any of the following:
-* [up] Means the migration has already been applied to the database.
-* [down] Means the migration has not been already applied to the database.
-* [*] Means there exists a migration registered in the database that doesn't have a corresponding
+* **[up]** Means the migration has already been applied to the database.
+* **[down]** Means the migration has not been already applied to the database.
+* **[\*]** Means there exists a migration registered in the database that doesn't have a corresponding
   file in the migration folder.
 
-If instead of printing a user friendly migration name you prefer a file path use the `-f` option.
+If instead of printing a user friendly migration name you prefer a file path use the `--file` or `-f` option.
 
-To be continued...
+## The run action
+Once we have our migrations in place is time to run them. Use the run action to execute all the migrations that have not been yet executed. You'll get a report of all the SQL statements that ran successfully. Every migration is executed as a transaction so if you get a failure in the middle of a migration the whole migration will be cancelled altogether and a report of the error will be printed to the console.
+
+Syntax:
+```bash
+migrate run
+```
+
+## The rollback action
+If you need to undo the last ran migration you can use the rollback action. The rollback action will only undo one migration at a time. If you want to undo more than one migration use the `--steps` or `-s` option specifying the amount of migrations to undo.
+
+Syntax:
+```bash
+migrate rollback
+```
