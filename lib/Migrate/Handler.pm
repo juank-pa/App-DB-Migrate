@@ -39,13 +39,12 @@ sub create_table {
 
     $sub->($table);
     $self->execute($table);
-
-    my @indexes = grep { $_->index } @{$table->columns};
-    $self->_add_indexes($table->name, @indexes);
+    $self->_add_indexes($table->name, @{$table->columns});
 }
 
 sub _add_indexes {
     my ($self, $table, @indexes) = @_;
+    @indexes = grep { $_->index } @indexes;
     $self->add_index($table, $_->name, $self->_get_index_options($_)) for @indexes;
 }
 
@@ -53,23 +52,24 @@ sub _get_index_options { $_[1]->index if ref($_[1]->index) eq 'HASH' }
 
 sub add_column {
     my ($self, $table, $column, $datatype, $options) = @_;
-    return $self->add_raw_column($table, column($column, $datatype, $options));
+    $self->add_raw_column($table, column($column, $datatype, $options));
 }
 
 sub add_reference {
     my ($self, $table, $ref_name, $options) = @_;
-    return $self->add_raw_column($table, reference($table, $ref_name, $options));
+    $self->add_raw_column($table, reference($table, $ref_name, $options));
 }
 
 sub add_timestamps {
     my ($self, $table, $options) = @_;
     $self->add_raw_column($table, timestamp('updated_at', $options));
-    return $self->add_raw_column($table, timestamp('created_at', $options));
+    $self->add_raw_column($table, timestamp('created_at', $options));
 }
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
     $self->execute('ALTER TABLE '.id($table, 1).' ADD '.$column);
+    $self->_add_indexes($table, $column);
 }
 
 sub add_index { shift->execute(table_index(@_)) }
