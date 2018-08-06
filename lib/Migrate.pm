@@ -14,7 +14,7 @@ use Migrate::Setup;
 use constant ACTION_OPTIONS => {
     generate => ['name|n:s', 'column|c:s@', 'ref|r:s@', 'tstamps|t'],
     status => ['file|f'],
-    run => [],
+    run => ['dry|d'],
     rollback => ['steps|s:i'],
     setup => [],
 };

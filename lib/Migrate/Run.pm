@@ -10,23 +10,26 @@ use Data::Dumper;
 use List::Util qw(min);
 
 sub run {
+    my $options = shift;
     Migrate::Setup::setup_migrations_table();
-    _run_migrations('down', -1)
+    _run_migrations('down', -1, $options->{dry})
 }
 
 sub rollback {
     my $options = shift;
     my $steps = $options->{steps} || 1;
     Migrate::Setup::setup_migrations_table();
-    _run_migrations('up', $steps)
+    _run_migrations('up', $steps, $options->{dry})
 }
 
 sub _run_migrations {
     my $filter = shift;
     my $steps = shift;
+    my $dry = shift;
     my @migrations = _filtered_migrations($filter, $steps);
     say('No more migrations to '.($steps == -1? 'run' : 'rollback')) && exit unless @migrations;
-    _run_migration($_) foreach @migrations;
+    say("Dry run:\n") if $dry;
+    _run_migration($_, $dry) foreach @migrations;
 }
 
 sub _filtered_migrations {
@@ -42,9 +45,9 @@ sub _filtered_migrations {
 }
 
 sub _run_migration {
-    my $migration = shift;
+    my ($migration, $dry) = @_;
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
-    my $handler = handler();
+    my $handler = handler($dry, *STDOUT);
 
     _load_migration($migration->{path}, $migration->{package});
 
@@ -53,7 +56,7 @@ sub _run_migration {
 
     eval {
         _run_migration_function($migration->{package}, $function, $handler);
-        _record_migration($function, $migration->{id}, $dbh);
+        _record_migration($function, $migration->{id}, $dbh) unless $dry;
     };
 
     return $dbh->commit unless $@;

@@ -19,17 +19,21 @@ my $driver;
 # * Add support to create join_tables
 
 sub new {
-    bless { sql => [] }, shift;
+    my ($class, $dry, $output) = @_;
+    bless { dry => $dry, output => $output }, $class;
 }
 
 sub execute {
     my $self = shift;
     my @sqls = @_;
     my $dbh = get_dbh();
+    my $output = $self->{output};
     for my $sql (@sqls) {
-        my $sth = $dbh->prepare($sql) or die("$DBI::errstr\n$sql");
-        $sth->execute() or die("$DBI::errstr\n$sql");
-        say($sql);
+        if (!$self->{dry}) {
+            my $sth = $dbh->prepare($sql) or die("$DBI::errstr\n$sql");
+            $sth->execute() or die("$DBI::errstr\n$sql");
+        }
+        (say $output $sql) if $output;
     }
 }
 
