@@ -16,6 +16,7 @@ use parent qw(Migrate::Column);
 sub new {
     my ($class, $table_name, $ref_name, $options) = @_;
     $options //= {};
+    $options->{index} //= 1;
     die("Reference name is needed\n") if !$ref_name;
     my $id_name = (ref($options->{foreign_key}) eq 'HASH' && $options->{foreign_key}->{column}) || "${ref_name}_id";
 
@@ -37,6 +38,7 @@ sub _add_foreign_key {
     return unless $foreign_key;
 
     $foreign_key = ref($foreign_key) eq 'HASH'? $foreign_key : {};
+    $foreign_key->{index} = $self->{index};
     my $to_table = $foreign_key->{to_table} || $self->_get_table_from_column;
     my $fk = foreign_key($self->table, $to_table, $foreign_key);
     $self->{fk} = $fk;
