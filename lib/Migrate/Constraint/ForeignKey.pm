@@ -26,8 +26,8 @@ sub primary_key { $_[0]->{options}->{primary_key} || Migrate::Config::id($_[0]->
 
 sub build_name { 'fk_'.$_[0]->from_table.'_'.$_[0]->column }
 
-sub delete_action { $_[0]->{options}->{on_delete} }
-sub update_action { $_[0]->{options}->{on_update} }
+sub on_delete { $_[0]->{options}->{on_delete} }
+sub on_update { $_[0]->{options}->{on_update} }
 
 sub valid_rules {
     {
@@ -38,8 +38,8 @@ sub valid_rules {
 }
 
 sub references { 'REFERENCES' }
-sub on_delete { 'ON DELETE' }
-sub on_update { 'ON UPDATE' }
+sub on_delete_sql { 'ON DELETE' }
+sub on_update_sql { 'ON UPDATE' }
 
 sub _get_column_name {
     my $self = shift;
@@ -48,13 +48,22 @@ sub _get_column_name {
     return $singular.'_id';
 }
 
+sub _action_sql {
+    my ($self, $action) = @_;
+    my $action_method = "on_${action}_sql";
+    return unless $self->can($action_method) && $self->$action_method;
+    my $rule = $self->{options}->{"on_$action"};
+    my $native_rule = $self->valid_rules($action)->{$rule // ''};
+    return unless $native_rule;
+    return $self->$action_method." $native_rule";
+}
+
 sub to_sql {
     my $self = shift;
-    my $delete_rule = $self->valid_rules('delete')->{$self->delete_action // ''};
-    my $update_rule = $self->valid_rules('update')->{$self->update_action // ''};
-    my $on_delete = $delete_rule && $self->on_delete? $self->on_delete.' '.$delete_rule : undef;
-    my $on_update = $update_rule && $self->on_update? $self->on_update.' '.$update_rule : undef;
-    my @elems = $self->add_constraint($self->references, $self->to_table, '('.$self->primary_key.')', $on_delete, $on_update);
+    my $on_delete = $self->_action_sql('delete');
+    my $on_update = $self->_action_sql('update');
+    my @elems = $self->add_constraint($self->references, $self->to_table,
+        '('.$self->primary_key.')', $on_delete, $on_update);
     return $self->_join_elems(@elems);
 }
 
