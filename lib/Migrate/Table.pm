@@ -3,29 +3,27 @@ package Migrate::Table;
 use strict;
 use warnings;
 
+use parent qw(Migrate::SQLizable);
+
 use Scalar::Util qw(looks_like_number);
-use Migrate::Factory qw(class id id_column column reference);
+use Migrate::Factory qw(class id id_column reference);
 use Migrate::Util;
 
 # TODO:
 # * Add support to 'as' paramteter to pass a SQL query instead of a block (ignore other options).
 # * Add a create_join_table
 
-use overload
-    fallback => 1,
-    '""' => sub { $_[0]->to_sql };
-
 sub new {
     my ($class, $name, $options) = @_;
     my $data = {
-        name => $name || die("Table name is needed\n"),
+        name => $name || die("Table name is needed"),
         options => $options,
         columns => []
     };
 
     $data->{name} = id($name, 1);
     my $table = bless($data, $class);
-    $table->push_primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
+    $table->_push_primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
         if !exists($options->{id}) || $options->{id};
     return $table;
 }
@@ -54,18 +52,18 @@ sub _shorthand_handler {
     my $datatype = shift;
     my $options;
     $options = pop if ref($_[-1]) eq 'HASH';
-    $self->push_column($_, $datatype, $options) for @_;
+    $self->column($_, $datatype, $options) for @_;
 }
 
 sub AUTOLOAD {
     my ($self, $name) = @_;
     my ($method) = our $AUTOLOAD =~ /::(\w+)$/;
-    my $meth_ref = $self->can($method) // die("Invalid function: $method\n");
+    my $meth_ref = $self->can($method) // die("Invalid function: $method");
     goto &$meth_ref;
 }
 
-sub push_column { shift->_push_column(column(@_)) }
-sub push_primary_key { my $self = shift; $self->_push_column(id_column($self->name, @_)) }
+sub column { shift->_push_column(Migrate::Factory::column(@_)) }
+sub _push_primary_key { my $self = shift; $self->_push_column(id_column($self->name, @_)) }
 
 sub timestamps {
     my $self = shift;
@@ -77,14 +75,16 @@ sub references {
     $self->_push_column(reference($self->name, $column, $options));
 }
 
-sub dbspace { undef }
-
 sub to_sql {
     my $self = shift;
     my $columns = join(',', @{$self->{columns}});
     my $temporary = $self->is_temporary && $self->temporary;
-    my $options = Migrate::Config::config->{add_options}? $self->options : undef;
-    return $self->_join_elems('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)", $self->dbspace, $options);
+    return $self->_join_elems($self->_add_options('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)"));
+}
+
+sub _add_options {
+    my $self = shift;
+    return (@_, Migrate::Config::config->{add_options}? $self->options : undef);
 }
 
 sub _join_elems { shift; Migrate::Util::join_elems(@_) }

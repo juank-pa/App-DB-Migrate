@@ -28,6 +28,6 @@ sub identifier_name {
     return get_dbh()->quote_identifier($id_name);
 }
 
-sub join_elems { join ' ', grep { defined($_) && length($_) } @_ }
+sub join_elems { scalar(@_)? join(' ', grep { defined($_) &&  length($_ // '') } @_) : '' }
 
 return 1;

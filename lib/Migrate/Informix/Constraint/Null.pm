@@ -6,5 +6,6 @@ use warnings;
 use parent qw(Migrate::Constraint::Null);
 
 sub add_constraint { my $self = shift; push(@_, $self->constraint_sql); @_ }
+sub null { '' }
 
 return 1;

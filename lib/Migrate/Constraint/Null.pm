@@ -3,9 +3,7 @@ package Migrate::Constraint::Null;
 use strict;
 use warnings;
 
-use overload
-    fallback => 1,
-    '""' => \&to_sql;
+use parent qw(Migrate::SQLizable);
 
 sub new {
     my ($class, $null) = @_;

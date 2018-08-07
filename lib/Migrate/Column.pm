@@ -3,19 +3,18 @@ package Migrate::Column;
 use strict;
 use warnings;
 
-use Migrate::Factory qw(null default datatype);
+use Migrate::Factory qw(null default datatype id);
 use Migrate::Util;
 
-use overload
-    fallback => 1,
-    '""' => sub { $_[0]->to_sql };
+use parent qw(Migrate::SQLizable);
 
 sub new {
     my ($class, $name, $datatype, $options) = @_;
+    $options //= {};
     my $datatype_options = $class->_extract_datatype_options($options);
     my $data = {
-        name => $name || die("Column name is needed\n"),
-        datatype => datatype($datatype, $datatype_options),
+        identifier => id($name) || die("Column name is needed\n"),
+        type => datatype($datatype, $datatype_options),
         options => $options // {},
         constraints => []
     };
@@ -28,9 +27,10 @@ sub new {
     return $col;
 }
 
-sub name { $_[0]->{name} }
+sub identifier { $_[0]->{identifier} }
+sub name { $_[0]->identifier->name }
 sub options { $_[0]->{options} }
-sub type { $_[0]->{datatype} }
+sub type { $_[0]->{type} }
 sub constraints { $_[0]->{constraints} }
 sub index { $_[0]->options->{index} }
 
@@ -44,7 +44,7 @@ sub _extract_datatype_options { Migrate::Util::extract_keys($_[1], ['limit', 'pr
 sub to_sql {
     my $self = shift;
     return $self->_join_elems(
-        $self->name,
+        $self->identifier,
         $self->type,
         @{$self->constraints}
     );
