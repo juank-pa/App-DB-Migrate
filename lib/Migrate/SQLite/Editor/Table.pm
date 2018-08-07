@@ -10,7 +10,7 @@ use Migrate::SQLite::Editor::Column;
 use Migrate::SQLite::Editor::Util qw(get_id_re string_re name_re);
 use Migrate::SQLite::Editor::Parser qw(parse_column);
 use Migrate::Util;
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(create class id);
 
 use feature 'say';
 
@@ -21,7 +21,7 @@ sub new {
         postfix => $postfix,
         columns => [@columns],
         changes => 0,
-        added_columns => [],
+        added_columns => {},
         heavy => 0,
         renames => {}
     };
@@ -34,13 +34,8 @@ sub column_names { map { $_->name } @{ $_[0]->columns } }
 sub _insert_column_names {
     my $self = shift;
     my @columns = map { $_->name } @{ $self->columns };
-    my @added_columns = @{ $self->{added_columns} };
-    return @columns unless scalar @added_columns;
-
-    for my $col (@added_columns) {
-        @columns = grep { $_ ne $col } @columns;
-    }
-    return map { $_->name } @columns;
+    return @columns unless keys %{ $self->{added_columns} };
+    return grep { !$self->{added_columns}->{$_} } @columns;
 }
 
 sub rename {
@@ -61,7 +56,8 @@ sub name {
     my $self = shift;
     my $name_re = get_id_re('table');
     $self->{prefix} =~ /\s*create\s+table\s*$name_re/io;
-    return $+{qtable} || $+{utable};
+    my $name = $+{qtable} || $+{utable};
+    $name =~ s/""/"/g;
 }
 
 sub indexes { $_[0]->{indexes} }
@@ -71,7 +67,7 @@ sub add_raw_column {
     my $table = $self->name;
     my $column_obj = parse_column($column_sql);
     push(@{ $self->{columns} }, $column_obj);
-    push(@{ $self->{added_columns} }, $column_obj->name);
+    $self->{added_columns}->{$column_obj->name} = 1;
     return $self->set_changed(1, 1);
 }
 
@@ -199,19 +195,8 @@ sub has_changed { $_[0]->{changed} }
 
 sub table_sql { my $self = shift; ($self->{prefix}.join(',', @{ $self->{columns} }).$self->{postfix}) }
 
-sub added_columns_count { scalar @{ $_[0]->{added_columns} } }
-
-sub added_columns_only { my $added = $_[0]->added_columns_count; $added && $added == $_[0]->{changes} }
-
-sub added_columns_sql {
-    my $self = shift;
-    my $table = $self->name;
-    return map { qq{ALTER TABlE "$table" ADD COLUMN }.$_ } @{ $self->{added_columns} };
-}
-
 sub to_sql {
     my $self = shift;
-    return $self->added_columns_sql if $self->added_columns_only;
     return $self->has_changed? $self->_alter_table() : $self->table_sql;
 }
 

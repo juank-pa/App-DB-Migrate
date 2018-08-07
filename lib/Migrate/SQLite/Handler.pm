@@ -5,21 +5,22 @@ use warnings;
 
 use parent qw(Migrate::Handler);
 
-#use Migrate::Factory qw(table);
 use Migrate::SQLite::Editor;
 
-sub _get_editor {
+sub editor_for {
     my ($self, $table_name) = @_;
-    $self->flush() if $self->editor && $self->editor->name ne $table_name;
+    $self->flush() if $self->has_editor && $self->editor->name ne $table_name;
     $self->{editor} = Migrate::SQLite::Editor::edit_table($table_name) unless defined($self->editor);
     return $self->editor;
 }
+
+sub has_editor_for { $_[0]->editor && $_[0]->editor->name eq $_[1] }
 
 sub editor { $_[0]->{editor} }
 
 sub flush {
     my $self = shift;
-    $self->push_sql($self->editor->to_sql) if defined $self->editor && $self->editor->has_changed;
+    $self->execute($self->editor->to_sql) if defined $self->editor && $self->editor->has_changed;
     delete $self->{editor};
     return $self;
 }
@@ -32,12 +33,13 @@ sub remove_index { my $self = shift; $self->flush()->SUPER::remove_index(@_) }
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
-    $self->_get_editor($table)->add_raw_column($column);
+    return $self->flush()->SUPER::add_raw_column($table, $column) unless $self->has_editor_for($table);
+    $self->editor_for($table)->add_raw_column($column);
 }
 
 sub remove_column {
     my ($self, $table, $column) = @_;
-    $self->_get_editor($table)->remove_columns($column);
+    $self->editor_for($table)->remove_columns($column);
 }
 
 sub rename_index {
@@ -48,57 +50,57 @@ sub rename_index {
 
 sub rename_table {
     my ($self, $old_name, $new_name) = @_;
-    $self->push_sql($self->_get_editor($old_name)->rename($new_name));
+    $self->execute($self->editor_for($old_name)->rename($new_name));
 }
 
 sub rename_column {
     my ($self, $table, $old_name, $new_name) = @_;
-    $self->_get_editor($table)->rename_column($old_name, $new_name);
+    $self->editor_for($table)->rename_column($old_name, $new_name);
 }
 
 sub add_foreign_key {
     my ($self, $table, $to, $options) = @_;
-    $self->_get_editor($table)->add_foreign_key($to, $options);
+    $self->editor_for($table)->add_foreign_key($to, $options);
 }
 
 sub remove_foreign_key {
     my ($self, $table, $to, $options) = @_;
-    $self->_get_editor($table)->remove_foreign_key($to, $options);
+    $self->editor_for($table)->remove_foreign_key($to, $options);
 }
 
 sub add_reference {
     my ($self, $table, $ref_name, $options) = @_;
-    $self->_get_editor($table)->add_reference($ref_name, $options);
+    $self->editor_for($table)->add_reference($ref_name, $options);
 }
 
 sub remove_reference {
     my ($self, $table, $name, $options) = @_;
-    $self->_get_editor($table)->remove_reference($name, $options);
+    $self->editor_for($table)->remove_reference($name, $options);
 }
 
 sub add_timestamps {
     my ($self, $table, $options) = @_;
-    $self->_get_editor($table)->add_timestamps($options);
+    $self->editor_for($table)->add_timestamps($options);
 }
 
 sub remove_timestamps {
     my ($self, $table) = @_;
-    $self->_get_editor($table)->remove_timestamps();
+    $self->editor_for($table)->remove_timestamps();
 }
 
 sub change_column {
     my ($self, $table, $column_name, $datatype, $options) = @_;
-    $self->_get_editor($table)->change_column($column_name, $datatype, $options);
+    $self->editor_for($table)->change_column($column_name, $datatype, $options);
 }
 
 sub change_column_default {
     my ($self, $table, $column_name, $default) = @_;
-    $self->_get_editor($table)->change_column_default($column_name, $default);
+    $self->editor_for($table)->change_column_default($column_name, $default);
 }
 
 sub change_column_null {
     my ($self, $table, $column_name, $null) = @_;
-    $self->_get_editor($table)->change_column_default($column_name, $null);
+    $self->editor_for($table)->change_column_default($column_name, $null);
 }
 
 return 1;

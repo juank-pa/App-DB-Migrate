@@ -73,7 +73,7 @@ sub add_timestamps {
 
 sub add_raw_column {
     my ($self, $table, $column) = @_;
-    $self->execute('ALTER TABLE '.id($table, 1).' ADD '.id($column));
+    $self->execute('ALTER TABLE '.id($table, 1).' ADD '.$column);
     $self->_add_indexes($table, $column);
 }
 
