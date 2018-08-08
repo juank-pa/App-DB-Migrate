@@ -69,7 +69,7 @@ You can further modify the generated perl file to perform additional actions or 
 and `down` functions receive two parameters: the migrate handler object `$mh` that provides an API to modify the
 database, and a DBI database handler `$dbh` that will allow running custom/advanced SQL commands or even query existing
 data so you can migrate the current data to a new format as well. For detailed documentation on the handler API read the
-wiki [migrate handler page](https://github.com/juank-pa/Perl-Migrate/wiki/The-Migrate-API).
+wiki [migrate handler page](https://github.com/juank-pa/Perl-Migrate/wiki/The-Migrate-Handler).
 
 ### The name IS important!
 A command like the previous one generates a file based on a generic template, and you'll have to write your migration
