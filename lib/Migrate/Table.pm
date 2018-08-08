@@ -23,13 +23,15 @@ sub new {
 
     $data->{name} = id($name, 1);
     my $table = bless($data, $class);
+
     $table->_push_primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
-        if !exists($options->{id}) || $options->{id};
+        if !$options->{as} && (!exists($options->{id}) || $options->{id});
     return $table;
 }
 
 sub identifier { shift->{name} }
 sub name { shift->identifier->name }
+sub as { shift->{options}->{as} }
 sub options { shift->{options}->{options} }
 sub is_temporary { shift->{options}{temporary} }
 sub columns { $_[0]->{columns} }
@@ -75,12 +77,22 @@ sub references {
     $self->_push_column(reference($self->name, $column, $options));
 }
 
+sub as_syntax {
+    my $self = shift;
+    my $temporary = $self->is_temporary && $self->temporary;
+    return $self->_join_elems($self->_add_options_as('CREATE', $temporary, 'TABLE', $self->identifier), 'AS', $self->as);
+}
+
 sub to_sql {
     my $self = shift;
+    return $self->as_syntax if $self->as;
+
     my $columns = join(',', @{$self->{columns}});
     my $temporary = $self->is_temporary && $self->temporary;
     return $self->_join_elems($self->_add_options('CREATE', $temporary, 'TABLE', $self->identifier, "($columns)"));
 }
+
+sub _add_options_as { shift->_add_options(@_) }
 
 sub _add_options {
     my $self = shift;

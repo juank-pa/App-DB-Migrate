@@ -42,7 +42,7 @@ sub create_table {
     ($sub, $options) = ($options, undef) if ref($options) eq 'CODE';
     my $table = table($name, $options);
 
-    $sub->($table);
+    $sub->($table) unless $options->{as};
     $self->execute($table);
     $self->_add_indexes($table->name, @{$table->columns});
 }
