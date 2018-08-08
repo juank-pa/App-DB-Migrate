@@ -158,6 +158,9 @@ Syntax:
 migrate run
 ```
 
+### The --dry or -d option
+The dry option will print to console the SQL commands to run without executing any of them. This allows getting a preview of the migrations to be run.
+
 ## The rollback action
 If you need to undo the last ran migration you can use the rollback action. The rollback action will only undo one migration at a time. If you want to undo more than one migration use the `--steps` or `-s` option specifying the amount of migrations to undo.
 
