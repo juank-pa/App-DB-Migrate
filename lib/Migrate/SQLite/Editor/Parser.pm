@@ -137,8 +137,8 @@ sub _parse_foreign_key {
     while ((my $rule = $tokens->[0] // '') =~ /^(?:on|match)$/i) {
         push @pred, splice(@$tokens, 0, 2);
 
-        if ($rule =~ /^on$/) {
-            my $c = $tokens->[0] =~ /^(?:set|no)$/i? 2 : 0;
+        if ($rule =~ /^on$/i) {
+            my $c = $tokens->[0] =~ /^(?:set|no)$/i? 2 : 1;
             push @pred, splice(@$tokens, 0, $c);
         }
     }

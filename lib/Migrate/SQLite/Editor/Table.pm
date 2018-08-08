@@ -10,7 +10,7 @@ use Migrate::SQLite::Editor::Column;
 use Migrate::SQLite::Editor::Util qw(get_id_re string_re name_re);
 use Migrate::SQLite::Editor::Parser qw(parse_column);
 use Migrate::Util;
-use Migrate::Factory qw(create class id);
+use Migrate::Factory qw(create class id column);
 
 use feature 'say';
 
@@ -40,11 +40,11 @@ sub _insert_column_names {
 
 sub rename {
     my $self = shift;
-    my $new_name = shift;
+    my $new_name = id(shift);
     my $prev_name = $self->name;
     my $re = _name_re();
-    $self->{prefix} =~ s/$re/$+{prefix}"$new_name"/;
-    return qq{ALTER TABLE "$prev_name" RENAME TO "$new_name"};
+    $self->{prefix} =~ s/$re/$+{prefix}$new_name/;
+    return 'ALTER TABLE '.id($prev_name).' RENAME TO '.$new_name;
 }
 
 sub _name_re {
@@ -56,8 +56,8 @@ sub name {
     my $self = shift;
     my $name_re = get_id_re('table');
     $self->{prefix} =~ /\s*create\s+table\s*$name_re/io;
-    my $name = $+{qtable} || $+{utable};
-    $name =~ s/""/"/g;
+    (my $name = $+{qtable} || $+{utable}) =~ s/""/"/g;
+    return $name;
 }
 
 sub indexes { $_[0]->{indexes} }
@@ -94,17 +94,21 @@ sub set_changed {
 }
 
 sub add_foreign_key {
-    my ($self, $to, $options) = @_;
-    my $column_name = _get_reference_column($options, $to);
-    my $column = $self->_column($column_name);
-    return $self->set_changed($column->add_foreign_key($self->name, $to, $options), 1);
+    my ($self, $fk) = @_;
+    my $column = $self->_column($fk->column);
+    return $self->set_changed($column->add_foreign_key($fk), 1);
 }
 
 sub remove_foreign_key {
-    my ($self, $to, $options) = @_;
-    my $column_name = _get_reference_column($options, $to);
-    my $column = $self->_column($column_name);
+    my ($self, $fk) = @_;
+    my $column = $self->_column_with_constraint_named($fk->name) || die('Column with foreign key not found');
     return $self->set_changed($column->remove_foreign_key(), 0);
+}
+
+sub _column_with_constraint_named {
+    my $self = shift;
+    my $name = shift;
+    return (grep { $_->has_foreign_key && $_->foreign_key_constraint->name eq $name } @{ $self->columns })[0];
 }
 
 sub _get_reference_column {
@@ -122,18 +126,25 @@ sub rename_column {
 
 sub _column {
     my ($self, $column) = @_;
-    for (@{ $self->columns }) {
-        return $_ if $_->name eq $column;
+    my $index = $self->_column_index($column);
+    die ("Column $column not found on database") if $index == -1;
+    return $self->columns->[$index];
+}
+
+sub _column_index {
+    my ($self, $column) = @_;
+    for my $i (0 .. $#{ $self->columns }) {
+        return $i if $self->columns->[$i]->name eq $column;
     }
+    return -1;
 }
 
 sub change_column {
     my ($self, $column_name, $datatype, $options) = @_;
+    my $index = $self->_column_index($column_name);
     ($datatype, $options) = (undef, $datatype) if ref($datatype) eq 'HASH';
-    $self->change_column_null($column_name, $options->{null}) if exists($options->{null});
-    $self->change_column_default($column_name, $options->{default}) if exists($options->{default});
-    $self->_column($column_name)->change_datatype($datatype, $options) if $datatype;
-    return $self->set_changed(0, 1);
+    $self->{columns}->[$index] = (column($column_name, $datatype, $options));
+    return $self->set_changed(1, 1);
 }
 
 sub change_column_default {
@@ -176,7 +187,13 @@ sub _rename_indexes {
 
 sub _remove_column {
     my ($self, $column) = @_;
+    die("Column $column not found for table ".$self->name) unless $self->_has_column($column);
     return grep { $_->name ne $column } @{ $self->columns };
+}
+
+sub _has_column {
+    my ($self, $column) = @_;
+    return grep { $_->name eq $column } @{ $self->columns };
 }
 
 sub _copy_data_sql {

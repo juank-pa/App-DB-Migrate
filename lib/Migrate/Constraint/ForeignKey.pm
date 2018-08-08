@@ -7,6 +7,7 @@ use Lingua::EN::Inflexion qw(noun);
 
 use Migrate::Util;
 use Migrate::Config;
+use Migrate::Factory qw(id);
 
 use parent qw(Migrate::Constraint);
 
@@ -14,7 +15,8 @@ sub new {
     my ($class, $from_table, $to_table, $options) = @_;
     my $data = $class->SUPER::new($options);
     $data->{from_table} = $from_table || die("From table needed\n");
-    $data->{to_table} = $to_table || die("To table needed\n");
+    $data->{to_table} = $to_table;
+    die("To table needed\n") if !$data->{to_table} && !$data->{options}->{remove};
     return bless($data, $class);
 }
 
@@ -62,8 +64,8 @@ sub to_sql {
     my $self = shift;
     my $on_delete = $self->_action_sql('delete');
     my $on_update = $self->_action_sql('update');
-    my @elems = $self->add_constraint($self->references, $self->to_table,
-        '('.$self->primary_key.')', $on_delete, $on_update);
+    my @elems = $self->add_constraint($self->references, id($self->to_table),
+        '('.id($self->primary_key).')', $on_delete, $on_update);
     return $self->_join_elems(@elems);
 }
 

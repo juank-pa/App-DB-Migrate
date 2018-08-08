@@ -6,7 +6,7 @@ use warnings;
 BEGIN {
     use parent qw(Exporter);
     our %EXPORT_TAGS = (
-        parse => [qw(trim)],
+        parse => [qw(trim unquote)],
         re_fun => [qw(get_id_re string_re name_re)],
     );
 
@@ -35,8 +35,18 @@ sub get_id_re {
 
 sub trim {
     my $str = shift;
+    return $str unless $str;
     $str =~ s/^\s+//;
     $str =~ s/\s+$//;
+    return $str;
+}
+
+sub unquote {
+    my $str = shift;
+    return $str unless $str && $str =~ /^".*"$/;
+    $str =~ s/^"//;
+    $str =~ s/"$//;
+    $str =~ s/""/"/;
     return $str;
 }
 

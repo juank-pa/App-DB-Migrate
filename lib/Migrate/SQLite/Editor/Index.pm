@@ -14,9 +14,7 @@ sub new {
     return bless { name => $name, table => $table, columns => $columns, options => $options // {} }, $class;
 }
 
-sub rename {
-
-}
+sub rename { $_[0]->{name} = $_[1] }
 
 sub to_sql {
     my $self = shift;

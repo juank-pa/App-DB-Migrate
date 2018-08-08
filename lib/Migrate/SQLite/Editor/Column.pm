@@ -8,7 +8,7 @@ use parent qw(Migrate::SQLizable);
 use Migrate::SQLite::Editor::Util qw(trim);
 use Migrate::SQLite::Editor::Parser qw(parse_constraint parse_datatype);
 use Migrate::SQLite::Editor::Datatype;
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(create class foreign_key datatype);
 use Migrate::Util;
 
 sub new {
@@ -73,7 +73,7 @@ sub change_default {
     return if !$prev_default && !defined($default);
 
     my $datatype = datatype($Migrate::SQLite::Editor::Datatype::datatypes{$self->type // ''} || 'string');
-    my $default_obj = default($default, { type => $datatype });
+    my $default_obj = $self->default($default, { type => $datatype });
     if ($prev_default) {
         if (defined $default) { $self->_update_default($prev_default, $default_obj) }
         else { $self->_remove_constraint('default') }
@@ -94,11 +94,12 @@ sub _add_default {
 
 sub has_foreign_key { $_[0]->_select_constraint('references') }
 
+sub foreign_key_constraint { ($_[0]->has_foreign_key)[0] }
+
 sub add_foreign_key {
-    my ($self, $from, $to, $options) = @_;
+    my ($self, $fk) = @_;
     return if $self->has_foreign_key;
-    my $fk_obj = foreign_key($from, $to, $options);
-    push @{ $self->{constraints} }, parse_constraint($fk_obj);
+    push @{ $self->{constraints} }, parse_constraint($fk);
     return 1;
 }
 

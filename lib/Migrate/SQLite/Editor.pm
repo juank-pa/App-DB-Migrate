@@ -19,10 +19,17 @@ sub edit_table {
 
 sub rename_index {
     my ($old_name, $new_name) = @_;
-    die('not implemented');
     my $index = index_by_name($old_name);
     $index->rename($new_name);
     return ('DROP INDEX '.id($old_name), $index);
+}
+
+sub index_by_name {
+    my $index = shift;
+    my $sql = get_dbh->selectall_arrayref(qq{SELECT sql FROM sqlite_master WHERE type='index' AND name='$index'});
+    my $res = $sql && $sql->[0] && $sql->[0]->[0];
+    die("Could not find index $index") unless $res;
+    return parse_index($res);
 }
 
 sub _table_sql {

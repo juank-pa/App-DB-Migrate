@@ -15,7 +15,7 @@ sub _add_indexes {
 }
 
 sub rename_index {
-    my ($self, $old_name, $new_name) = @_;
+    my ($self, undef, $old_name, $new_name) = @_;
     $self->execute('RENAME INDEX '.id($old_name, 1).' TO '.id($new_name));
 }
 
@@ -27,20 +27,6 @@ sub rename_table {
 sub rename_column {
     my ($self, $table, $old_name, $new_name) = @_;
     $self->execute('RENAME COLUMN '.id($table, 1).'.'.id($old_name).' TO '.id($new_name));
-}
-
-sub add_foreign_key {
-    my ($self, $table, $to, $options) = @_;
-    my $col = reference($table, $to, { foreign_key => $options // 1 });
-    my $fk = $col->foreign_key_constraint;
-    $self->execute('ALTER TABLE '.id($table, 1).' ADD CONSTRAINT FOREIGN KEY ('.$col->name.') REFERENCES '.$fk->to_table.' ('.$fk->column.') CONSTRAINT '.$fk->name);
-}
-
-sub remove_foreign_key {
-    my ($self, $table, $to, $options) = @_;
-    my $col = reference($table, $to, { foreign_key => $options // 1 });
-    my $fk = $col->foreign_key_constraint;
-    $self->execute('ALTER TABLE '.id($table, 1).' DROP CONSTRAINT '.$fk->name);
 }
 
 sub change_column {

@@ -12,7 +12,7 @@ use overload
 
 sub new {
     my ($class, $options) = @_;
-    return bless({ name => $options->{name}, options => $options }, $class);
+    return bless({ name => $options->{name}, options => $options || {} }, $class);
 }
 
 sub constraint { 'CONSTRAINT' }

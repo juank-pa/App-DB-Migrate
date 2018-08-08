@@ -33,7 +33,7 @@ sub execute {
             my $sth = $dbh->prepare($sql) or die("$DBI::errstr\n$sql");
             $sth->execute() or die("$DBI::errstr\n$sql");
         }
-        (say $output $sql) if $output;
+        (say $output "$sql;") if $output;
     }
 }
 
@@ -95,8 +95,8 @@ sub remove_columns {
 }
 
 sub remove_reference {
-    my ($self, $table, $name, $options) = @_;
-    my $id_name = (ref($options->{foreign_key}) eq 'HASH' && $options->{foreign_key}->{column}) || "${name}_id";
+    my ($self, $table, $name) = @_;
+    my $id_name = "${name}_id";
     $self->remove_column($table, $id_name);
 }
 
@@ -143,7 +143,8 @@ sub add_foreign_key {
 sub remove_foreign_key {
     my ($self, $from_table, $options_or_to_table) = @_;
     my $options = ref($options_or_to_table) eq 'HASH'? $options_or_to_table : undef;
-    my $to_table = $options? 'dummy' : $options_or_to_table;
+    my $to_table = $options? undef : $options_or_to_table;
+    $options->{remove} = 1;
     my $fk = foreign_key($from_table, $to_table, $options);
     $self->_remove_foreign_key($from_table, $fk);
 }

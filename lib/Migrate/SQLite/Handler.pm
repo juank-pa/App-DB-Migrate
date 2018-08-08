@@ -9,7 +9,7 @@ use Migrate::SQLite::Editor;
 
 sub editor_for {
     my ($self, $table_name) = @_;
-    $self->flush() if $self->has_editor && $self->editor->name ne $table_name;
+    $self->flush() if $self->editor && $self->editor->name ne $table_name;
     $self->{editor} = Migrate::SQLite::Editor::edit_table($table_name) unless defined($self->editor);
     return $self->editor;
 }
@@ -43,9 +43,9 @@ sub remove_column {
 }
 
 sub rename_index {
-    my ($self, $old_name, $new_name) = @_;
+    my ($self, undef, $old_name, $new_name) = @_;
     $self->flush();
-    Migrate::SQLite::Editor::rename_index($old_name, $new_name);
+    $self->execute(Migrate::SQLite::Editor::rename_index($old_name, $new_name));
 }
 
 sub rename_table {
@@ -58,39 +58,19 @@ sub rename_column {
     $self->editor_for($table)->rename_column($old_name, $new_name);
 }
 
-sub add_foreign_key {
-    my ($self, $table, $to, $options) = @_;
-    $self->editor_for($table)->add_foreign_key($to, $options);
+sub _add_foreign_key {
+    my ($self, $from_table, $fk) = @_;
+    $self->editor_for($from_table)->add_foreign_key($fk);
 }
 
-sub remove_foreign_key {
-    my ($self, $table, $to, $options) = @_;
-    $self->editor_for($table)->remove_foreign_key($to, $options);
-}
-
-sub add_reference {
-    my ($self, $table, $ref_name, $options) = @_;
-    $self->editor_for($table)->add_reference($ref_name, $options);
-}
-
-sub remove_reference {
-    my ($self, $table, $name, $options) = @_;
-    $self->editor_for($table)->remove_reference($name, $options);
-}
-
-sub add_timestamps {
-    my ($self, $table, $options) = @_;
-    $self->editor_for($table)->add_timestamps($options);
-}
-
-sub remove_timestamps {
-    my ($self, $table) = @_;
-    $self->editor_for($table)->remove_timestamps();
+sub _remove_foreign_key {
+    my ($self, $from_table, $fk) = @_;
+    $self->editor_for($from_table)->remove_foreign_key($fk);
 }
 
 sub change_column {
-    my ($self, $table, $column_name, $datatype, $options) = @_;
-    $self->editor_for($table)->change_column($column_name, $datatype, $options);
+    my ($self, $table, $column, $datatype, $options) = @_;
+    $self->editor_for($table)->change_column($column, $datatype, $options);
 }
 
 sub change_column_default {
