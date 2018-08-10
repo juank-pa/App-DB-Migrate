@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/juank-pa/Perl-Migrate.svg?branch=master)](https://travis-ci.org/juank-pa/Perl-Migrate)
+
 # Migrate
 
 This library allows managing DB migrations using the command line. While there are other libraries out
