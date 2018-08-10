@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use feature 'say';
 
+our $VERSION = '0.001';
+
 use Getopt::Long qw{:config posix_default bundling auto_version};
 
 use Migrate::Generate;

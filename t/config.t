@@ -11,9 +11,9 @@ use Migrate::Config;
 
 subtest 'libary_root returns the library root' => sub {
     my $pwd = Cwd::cwd;
-    (my $comp_root = $0) =~ s/(\/)?t\/config\.t//;
+    (my $comp_root = __FILE__) =~ s/(\/)?t\/config\.t//;
 
-    (my $lib_root = Migrate::Config::library_root) =~ s/$pwd//;
+    (my $lib_root = Migrate::Config::library_root) =~ s/$pwd(\/blib|\/)?//;
 
     is($lib_root || '.', $comp_root || '.');
 };

@@ -4,8 +4,8 @@ our $library_root;
 
 BEGIN {
     use File::Spec;
-    $module = File::Spec->catfile('lib','Migrate','Config.pm');
-    ($library_root = __FILE__) =~ s/[\\\/:]?$module$//
+    $module = 'lib/Migrate/Config.pm';
+    ($library_root = __FILE__) =~ s/\/?$module$//
 }
 
 use strict;

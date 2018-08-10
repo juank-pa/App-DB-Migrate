@@ -5,9 +5,8 @@ use warnings;
 
 BEGIN {
     use Exporter;
-    our ($VERSION, @ISA, @EXPORT_OK);
+    our (@ISA, @EXPORT_OK);
 
-    $VERSION = 0.001;
     @ISA = qw(Exporter);
     @EXPORT_OK = qw(get_dbh);
 }
