@@ -114,7 +114,7 @@ sub prepare {
     Migrate::Config::config($hash || undef);
     remove_tree('db');
     make_path('db');
-    copy('templates/config.pl', 'db');
+    copy('script/config.pl', 'db');
 }
 
 done_testing;

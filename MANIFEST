@@ -33,7 +33,6 @@ lib/Migrate/Informix/Table.pm
 lib/Migrate/Migrations.pm
 lib/Migrate/Run.pm
 lib/Migrate/Setup.pm
-lib/Migrate/SQLite/Constraint
 lib/Migrate/SQLite/Constraint/Default.pm
 lib/Migrate/SQLite/Datatype.pm
 lib/Migrate/SQLite/Editor.pm
@@ -53,9 +52,15 @@ lib/Migrate/Status.pm
 lib/Migrate/Table.pm
 lib/Migrate/Util.pm
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
 migrate
 README.md
+script/add.tl
+script/config.pl
+script/create.tl
+script/drop.tl
+script/generic.tl
+script/remove.tl
 t/column.t
 t/column/primary_key.t
 t/column/references.t
@@ -73,9 +78,3 @@ t/setup.t
 t/setup_cmd.t
 t/sqlite/editor/column.t
 t/table.t
-templates/add.tl
-templates/config.pl
-templates/create.tl
-templates/drop.tl
-templates/generic.tl
-templates/remove.tl

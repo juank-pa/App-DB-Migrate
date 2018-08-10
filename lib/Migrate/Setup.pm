@@ -16,7 +16,7 @@ my $db_path = 'db';
 my $migrations_path = "$db_path/migrations";
 my $config_file_name = 'config.pl';
 
-my $source_templates_path = Migrate::Config::library_root.'/templates';
+my $source_templates_path = Migrate::Config::library_root.'/script';
 my $source_config_path = "$source_templates_path/$config_file_name";
 my $target_config_path = "$db_path/$config_file_name";
 my $target_config_sample_path = "$target_config_path.example";
