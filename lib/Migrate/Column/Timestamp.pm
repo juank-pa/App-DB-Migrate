@@ -11,15 +11,17 @@ sub new {
     my ($class, $name, $options) = @_;
     my $new_options = { %{ $options // {} }};
     $new_options->{default} = { timestamp => 1 };
-    my $col = column($name, 'datetime', $new_options);
+    my $col = column($name, $class->default_datatype, $new_options);
     return bless({ column => $col }, $class);
 }
+
+sub default_datatype { 'datetime' }
 
 # Delegates
 sub name { $_[0]->{column}->name }
 sub options { $_[0]->{column}->options }
 sub type { $_[0]->{column}->type }
-sub constraints { $_[0]->{column}->contraints }
+sub constraints { $_[0]->{column}->constraints }
 sub index { $_[0]->{column}->index }
 sub to_sql { $_[0]->{column}->to_sql }
 

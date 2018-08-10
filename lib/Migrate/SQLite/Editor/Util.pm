@@ -46,7 +46,7 @@ sub unquote {
     return $str unless $str && $str =~ /^".*"$/;
     $str =~ s/^"//;
     $str =~ s/"$//;
-    $str =~ s/""/"/;
+    $str =~ s/""/"/g;
     return $str;
 }
 

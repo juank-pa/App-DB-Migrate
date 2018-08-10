@@ -10,9 +10,10 @@ use File::Spec;
 
 use Migrate::Setup;
 
-my $migrations = File::Spec->catdir('db', 'migrations');
-my $config = File::Spec->catfile('db', 'config.pl');
-my $config_sample = File::Spec->catfile('db', 'config.pl.example');
+my $migrations = 'db/migrations';
+my $config = 'db/config.pl';
+my $config_sample = 'db/config.pl.example';
+my $gitignore = 'db/.gitignore';
 
 subtest 'Migrations path' => sub {
     is(Migrate::Setup::migrations_path, $migrations);
@@ -116,6 +117,24 @@ subtest 'create_migration_config_file returns false if the file already exists' 
     ok(!$res, 'Returns false');
 };
 
+subtest 'create_gitignore_file returns 0 if the file already exists' => sub {
+    make_migrations();
+    create_gitignore();
+
+    my $res = Migrate::Setup::create_gitignore_file();
+
+    ok(!$res, 'Returns false');
+};
+
+subtest 'create_gitignore_file when gitignore does not exists creates one' => sub {
+    remove_root();
+
+    Migrate::Setup::create_gitignore_file();
+
+    ok(-e $gitignore, 'Migrations config template copied');
+    is(file_contents($gitignore), "config.pl\n");
+};
+
 subtest 'setup creates all necessary migration files and folder' => sub {
     remove_root();
 
@@ -124,6 +143,7 @@ subtest 'setup creates all necessary migration files and folder' => sub {
     ok(-e $config, 'Migrations config template copied');
     ok(-e $config_sample, 'Migrations config sample template copied');
     ok(-e $migrations, 'Migrations config sample template copied');
+    ok(-e $gitignore, 'Migrations gitignore created');
 };
 
 subtest 'setup returns a list of created items or errors found' => sub {
@@ -137,7 +157,7 @@ subtest 'setup returns a list of created items or errors found' => sub {
 
     ok(!-e $config, 'Migrations config template copied');
     ok(-e $migrations, 'Migrations config sample template copied');
-    is_deeply(\@res, [$migrations, "Could not create file:$config File error!!!"]);
+    is_deeply(\@res, [$migrations, "Could not create file:$config File error!!!", 'db/.gitignore']);
 };
 
 subtest 'setup returns an empty list if already setup' => sub {
@@ -154,7 +174,8 @@ sub make_migrations { remove_root(); make_path($migrations) }
 sub remove_root { remove_tree('db') }
 sub create_config { my $content = shift; create_file($config, $content) }
 sub create_config_sample { my $content = shift; create_file($config_sample, $content) }
-sub create_files { create_config(); create_config_sample() }
+sub create_gitignore { my $content = shift; create_file($gitignore, $content) }
+sub create_files { create_config(); create_config_sample(); create_gitignore() }
 
 sub file_contents {
     my $file = shift;

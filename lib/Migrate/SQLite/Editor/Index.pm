@@ -3,11 +3,9 @@ package Migrate::SQLite::Editor::Index;
 use strict;
 use warnings;
 
-use Migrate::SQLite::Editor::Util qw(trim get_id_re string_re);
+use parent qw(SQLizable);
 
-use overload
-    fallback => 1,
-    '""' => sub { $_[0]->to_sql() };
+use Migrate::SQLite::Editor::Util qw(trim get_id_re string_re);
 
 sub new {
     my ($class, $name, $table, $columns, $options) = @_;

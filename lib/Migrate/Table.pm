@@ -6,12 +6,8 @@ use warnings;
 use parent qw(Migrate::SQLizable);
 
 use Scalar::Util qw(looks_like_number);
-use Migrate::Factory qw(class id id_column reference);
+use Migrate::Factory qw(class id id_column reference timestamp);
 use Migrate::Util;
-
-# TODO:
-# * Add support to 'as' paramteter to pass a SQL query instead of a block (ignore other options).
-# * Add a create_join_table
 
 sub new {
     my ($class, $name, $options) = @_;
@@ -23,7 +19,6 @@ sub new {
 
     $data->{name} = id($name, 1);
     my $table = bless($data, $class);
-
     $table->_push_primary_key($options->{primary_key}, { type => $options->{id}, autoincrement => 1 })
         if !$options->{as} && (!exists($options->{id}) || $options->{id});
     return $table;
@@ -77,7 +72,7 @@ sub references {
     $self->_push_column(reference($self->name, $column, $options));
 }
 
-sub as_syntax {
+sub _as_syntax {
     my $self = shift;
     my $temporary = $self->is_temporary && $self->temporary;
     return $self->_join_elems($self->_add_options_as('CREATE', $temporary, 'TABLE', $self->identifier), 'AS', $self->as);
@@ -85,7 +80,7 @@ sub as_syntax {
 
 sub to_sql {
     my $self = shift;
-    return $self->as_syntax if $self->as;
+    return $self->_as_syntax if $self->as;
 
     my $columns = join(',', @{$self->{columns}});
     my $temporary = $self->is_temporary && $self->temporary;

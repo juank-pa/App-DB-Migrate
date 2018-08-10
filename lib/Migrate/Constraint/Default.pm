@@ -12,18 +12,18 @@ use parent qw(Migrate::Constraint);
 sub new {
     my ($class, $default, $options) = @_;
     $options //= {};
-    die("Datatype is needed\n") if !defined($options->{type}) && defined($default) && ref($default) ne 'HASH';
+    die('Datatype is needed') if !defined($options->{type}) && defined($default) && ref($default) ne 'HASH';
     my $data = $class->SUPER::new($options);
     $data->{type} = $options->{type};
     $data->{default} = $default;
-    return bless($data, $class);
+    return $data;
 }
 
 sub current_timestamp { undef }
 sub null { 'NULL' }
 sub default { 'DEFAULT' }
 
-sub datatype { $_[0]->{type} }
+sub type { $_[0]->{type} }
 sub value { $_[0]->{default} }
 
 sub _hash_arg { ref($_[0]->value) eq 'HASH' && $_[0]->value->{$_[1]} }
@@ -36,8 +36,8 @@ sub _quoted_default_value {
     my $self = shift;
     return $self->current_timestamp if $self->is_current_timestamp;
     return $self->null unless defined($self->value);
-    return ($self->value? $self->true : $self->false) if $self->datatype->name eq 'boolean';
-    return $self->datatype->quote($self->value);
+    return ($self->value? $self->true : $self->false) if $self->type->name eq 'boolean';
+    return $self->type->quote($self->value);
 }
 
 sub to_sql { $_[0]->_join_elems($_[0]->add_constraint($_[0]->default, $_[0]->_quoted_default_value)) }

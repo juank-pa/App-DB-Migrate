@@ -10,12 +10,11 @@ use parent qw(Migrate::SQLizable);
 
 sub new {
     my ($class, $name, $datatype, $options) = @_;
-    $options //= {};
     my $datatype_options = $class->_extract_datatype_options($options);
     my $data = {
-        identifier => id($name) || die("Column name is needed\n"),
+        identifier => id($name || die('Column name is needed')),
         type => datatype($datatype, $datatype_options),
-        options => $options // {},
+        options => $options //= {},
         constraints => []
     };
 

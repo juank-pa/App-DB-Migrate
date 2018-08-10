@@ -1,20 +1,14 @@
 use strict;
 use warnings;
 
+use lib 't/lib';
+
 use Test::More;
-use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
-use File::Path qw(remove_tree make_path);
-use File::Spec;
+use Mocks;
 
-use lib 't/lib';
-use MockStringifiedObject;
-use Migrate::Factory;
 use Migrate::Constraint::ForeignKey;
-
-my $util = Test::MockModule->new('Migrate::Util');
-$util->mock('identifier_name', sub { 'schema.'.$_[0] });
 
 subtest 'new creates a foreign key' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'dept');
@@ -24,12 +18,32 @@ subtest 'new creates a foreign key' => sub {
 
 subtest 'new is invalid if from_table is not sent' => sub {
     trap { Migrate::Constraint::ForeignKey->new() };
-    is($trap->die, "From table needed\n");
+    like($trap->die, qr/^From table needed/);
 };
 
 subtest 'new is invalid if to_table is not sent' => sub {
     trap { Migrate::Constraint::ForeignKey->new('users') };
-    is($trap->die, "To table needed\n");
+    like($trap->die, qr/^To table needed/);
+};
+
+subtest 'new is not invalid if to_table is not sent but used for removal process' => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', undef, { remove => 1 });
+    ok(ref($fk));
+};
+
+subtest 'is SQLizable' => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('from', 'to');
+    isa_ok($fk, "Migrate::SQLizable");
+};
+
+subtest 'from_table returns the constraint source table', => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
+    is($fk->from_table, 'users');
+};
+
+subtest 'to_table returns the constraint source table', => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
+    is($fk->to_table, 'departments');
 };
 
 subtest 'column returns the singularized to_table name plus _id' => sub {
@@ -65,82 +79,82 @@ subtest 'primary_key returns the overridden primary_key' => sub {
 
 subtest 'name returns a constructed constraint name' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
-    is($fk->name, 'schema.fk_users_department_id');
+    is($fk->name, 'fk_users_department_id');
 };
 
 subtest 'name returns a constructed constraint name with overridden column' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { column => 'other_column' });
-    is($fk->name, 'schema.fk_users_other_column');
+    is($fk->name, 'fk_users_other_column');
 };
 
 subtest 'name returns a constructed constraint name with overridden name' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { name => 'my_new_fk_name' });
-    is($fk->name, 'schema.my_new_fk_name');
+    is($fk->name, 'my_new_fk_name');
+};
+
+subtest 'on_delete returns the on delete rule' => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'cascade' });
+    is($fk->on_delete, 'cascade');
+};
+
+subtest 'on_update returns the on update rule' => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'cascade' });
+    is($fk->on_delete, 'cascade');
 };
 
 subtest 'to_sql returns SQL representation of foreign key' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id)');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with overridden column' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { column => 'my_column' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_my_column REFERENCES departments (id)');
+    is($fk->to_sql, 'CONSTRAINT fk_users_my_column REFERENCES departments (id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with overridden primary_key' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { primary_key => 'new_id' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (new_id)');
-};
-
-subtest 'to_sql returns SQL representation of foreign key with overridden name' => sub {
-    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { name => 'my_cool_fk_name' });
-    is($fk->to_sql, 'CONSTRAINT schema.my_cool_fk_name REFERENCES departments (id)');
-};
-
-subtest 'to_sql returns SQL representation of foreign key with overridden primary_key' => sub {
-    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { primary_key => 'new_id' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (new_id)');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (new_id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with config overridden primary_key' => sub {
     my $config = new Test::MockModule('Migrate::Config');
     $config->mock(id => 'any_id');
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments');
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (any_id)');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (any_id)');
+};
+
+subtest 'to_sql returns SQL representation of foreign key with overridden name' => sub {
+    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { name => 'my_cool_fk_name' });
+    is($fk->to_sql, 'CONSTRAINT my_cool_fk_name REFERENCES departments (id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with delete rule' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'cascade' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON DELETE CASCADE');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON DELETE CASCADE');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'nullify' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON DELETE SET NULL');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON DELETE SET NULL');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'restrict' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON DELETE RESTRICT');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON DELETE RESTRICT');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_delete => 'other' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id)');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id)');
 };
 
 subtest 'to_sql returns SQL representation of foreign key with update rule' => sub {
     my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_update => 'cascade' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON UPDATE CASCADE');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON UPDATE CASCADE');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_update => 'nullify' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON UPDATE SET NULL');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON UPDATE SET NULL');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_update => 'restrict' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON UPDATE RESTRICT');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id) ON UPDATE RESTRICT');
 
     $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_update => 'other' });
-    is($fk->to_sql, 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id)');
-};
-
-subtest 'ForeignKey stringifies to SQL representation of foreign key' => sub {
-    my $fk = Migrate::Constraint::ForeignKey->new('users', 'departments', { on_update => 'cascade', on_delete => 'nullify' });
-    is("$fk", 'CONSTRAINT schema.fk_users_department_id REFERENCES departments (id) ON DELETE SET NULL ON UPDATE CASCADE');
+    is($fk->to_sql, 'CONSTRAINT fk_users_department_id REFERENCES departments (id)');
 };
 
 done_testing();

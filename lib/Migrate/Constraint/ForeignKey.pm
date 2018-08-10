@@ -14,10 +14,10 @@ use parent qw(Migrate::Constraint);
 sub new {
     my ($class, $from_table, $to_table, $options) = @_;
     my $data = $class->SUPER::new($options);
-    $data->{from_table} = $from_table || die("From table needed\n");
+    $data->{from_table} = $from_table || die('From table needed');
+    die('To table needed') if !$to_table && !$options->{remove};
     $data->{to_table} = $to_table;
-    die("To table needed\n") if !$data->{to_table} && !$data->{options}->{remove};
-    return bless($data, $class);
+    return $data;
 }
 
 sub from_table { $_[0]->{from_table} }
@@ -54,14 +54,18 @@ sub _action_sql {
     my ($self, $action) = @_;
     my $action_method = "on_${action}_sql";
     return unless $self->can($action_method) && $self->$action_method;
+
     my $rule = $self->{options}->{"on_$action"};
     my $native_rule = $self->valid_rules($action)->{$rule // ''};
     return unless $native_rule;
+
     return $self->$action_method." $native_rule";
 }
 
 sub to_sql {
     my $self = shift;
+    return '' if $self->{options}->{remove};
+
     my $on_delete = $self->_action_sql('delete');
     my $on_update = $self->_action_sql('update');
     my @elems = $self->add_constraint($self->references, id($self->to_table),

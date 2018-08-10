@@ -1,52 +1,36 @@
 use strict;
 use warnings;
 
-use Test::More;
-use Test::MockObject;
-use Test::MockModule;
-use Test::Trap;
-use File::Path qw(remove_tree make_path);
-use File::Spec;
-
 use lib 't/lib';
-use MockStringifiedObject;
-use Migrate::Factory;
+
+use Test::More;
+use Test::Trap;
+use Mocks;
+
 use Migrate::Column;
 
-our $params = {};
-our $test_die;
-our $mocks = {
-    datatype => MockStringifiedObject->new('<DATATYPE>'),
-    null => MockStringifiedObject->new('<NULL>'),
-    default => MockStringifiedObject->new('<DEFAULT>')
+subtest 'new creates a column' => sub {
+    my $col = Migrate::Column->new('column');
+    isa_ok($col, 'Migrate::Column');
 };
-
-no warnings 'redefine';
-local *Migrate::Column::create = sub {
-    die("Test issue\n") if $test_die;
-
-    my $type = lc((split('::', $_[0]))[-1]);
-    $params->{$type} = \@_; $mocks->{$type}
-};
-use warnings 'redefine';
 
 subtest 'new is invalid if datatype fails' => sub {
-    local $test_die = 1;
+    fail_factory();
     trap { Migrate::Column->new('column', 'anything') };
     is($trap->die, "Test issue\n");
 };
 
 subtest 'new is invalid if no name is given' => sub {
     trap { Migrate::Column->new('', 'integer') };
-    is($trap->die, "Column name is needed\n");
+    like($trap->die, qr/^Column name is needed/);
 };
 
 subtest 'new passes datatype to factory' => sub {
-    my $col = Migrate::Column->new('column', 'my_datatype');
-    is_deeply($params->{datatype}, ['datatype', 'my_datatype', undef]);
+    Migrate::Column->new('column', 'my_datatype');
+    ok_factory(DATATYPE, ['my_datatype', undef]);
 };
 
-subtest 'new passes options to factory' => sub {
+subtest 'new passes options to datatype factory' => sub {
     my $options = {
         any => 'ANY',
         limit => 23,
@@ -57,33 +41,51 @@ subtest 'new passes options to factory' => sub {
 
     is_deeply($col->options, $options);
     delete($options->{any});
-    is_deeply($params->{'datatype'}, ['datatype', 'my_datatype', $options]);
+    ok_factory(DATATYPE, ['my_datatype', $options]);
 };
 
-subtest 'new create null constraint if passed' => sub {
-    local $params->{null};
+subtest 'new creates null constraint if passed' => sub {
+    clear_factories();
     my $col = Migrate::Column->new('column_name', 'datatype', { null => 1 });
-    is_deeply($params->{null}, ['Constraint::Null', 1]);
-    is($col->constraints->[0], $mocks->{null});
+    ok_factory(NULL, [1]);
+    is($col->constraints->[0], get_mock(NULL));
 };
 
 subtest 'new creates default constraint if passed' => sub {
-    local $params->{default};
+    clear_factories();
     my $col = Migrate::Column->new('column_name', 'datatype', { default => 3 });
-    is_deeply($params->{default}, ['Constraint::Default', 3, $mocks->{datatype}]);
-    is($col->constraints->[0], $mocks->{default});
+    ok_factory(DEFAULT, [3, { type => get_mock(DATATYPE) }]);
+    is($col->constraints->[0], get_mock(DEFAULT));
 };
 
 subtest 'new does not create null constraint if not passed' => sub {
-    local $params->{null};
+    clear_factories();
     my $col = Migrate::Column->new('column_name', 'datatype', {});
-    is($params->{null}, undef);
+    ok_factory(NULL, undef);
 };
 
 subtest 'new does not create default constraint if not passed' => sub {
-    local $params->{default};
+    clear_factories();
     my $col = Migrate::Column->new('column_name', 'datatype', {});
-    is($params->{default}, undef);
+    ok_factory(DEFAULT, undef);
+};
+
+subtest 'new creates a name identifier' => sub {
+    clear_factories();
+    my $col = Migrate::Column->new('column_name', 'datatype', {});
+    is($col->identifier, 'column_name');
+};
+
+subtest 'is SQLizable' => sub {
+    my $col = Migrate::Column->new('column', 'my_datatype');
+    isa_ok($col, "Migrate::SQLizable");
+};
+
+subtest 'name returns the column identifier name' => sub {
+    my $options = {};
+    my $col = Migrate::Column->new('column', 'datatype', $options);
+    $col->identifier->mock('name', sub { 'id_name' });
+    is($col->name, 'id_name');
 };
 
 subtest 'options returns the column options' => sub {
@@ -92,9 +94,22 @@ subtest 'options returns the column options' => sub {
     is($options, $col->options);
 };
 
-subtest 'datatype returns a constructed Datatype object from the the column datatype' => sub {
+subtest 'type returns a constructed Datatype object from the column datatype' => sub {
     my $col = Migrate::Column->new('column', 'datatype');
-    is($col->datatype, $mocks->{datatype});
+    is($col->type, get_mock(DATATYPE));
+};
+
+subtest 'index returns index options' => sub {
+    my $index_options = { any_option => 'test' };
+    my $col = Migrate::Column->new('column', 'datatype', { index => $index_options });
+    is_deeply($col->index, $index_options);
+};
+
+subtest 'add_constraint adds a constraint to the column' => sub {
+    my $any_constraint = {};
+    my $col = Migrate::Column->new('column', 'datatype');
+    $col->add_constraint($any_constraint);
+    is($col->constraints->[-1], $any_constraint);
 };
 
 subtest 'to_sql returns the column SQL representation' => sub {
@@ -102,7 +117,7 @@ subtest 'to_sql returns the column SQL representation' => sub {
     is($col->to_sql, 'column_name <DATATYPE>');
 };
 
-subtest 'to_sql returns the column SQL representation as not null' => sub {
+subtest 'to_sql returns the column SQL representation with null constraint' => sub {
     my $col = Migrate::Column->new('column_name', 'datatype', { null => 0 });
     is($col->to_sql, 'column_name <DATATYPE> <NULL>');
 
@@ -121,9 +136,11 @@ subtest 'to_sql returns the column SQL representation with a default value' => s
     is($col->to_sql, 'column_name <DATATYPE> <NULL> <DEFAULT>');
 };
 
-subtest 'Column stringifies as the column SQL representation' => sub {
-    my $col = Migrate::Column->new('column_name', 'datatype', { null => 0, default => 45 });
-    is("$col", 'column_name <DATATYPE> <NULL> <DEFAULT>');
+subtest 'to_sql returns the column SQL representation with an added constraint' => sub {
+    my $col = Migrate::Column->new('column_name', 'datatype');
+    $col->add_constraint(MockStringifiedObject->new('<CONSTRAINT1>'));
+    $col->add_constraint(MockStringifiedObject->new('<CONSTRAINT2>'));
+    is($col->to_sql, 'column_name <DATATYPE> <CONSTRAINT1> <CONSTRAINT2>');
 };
 
 done_testing();

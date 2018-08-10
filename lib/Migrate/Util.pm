@@ -2,6 +2,7 @@ package Migrate::Util;
 
 use Migrate::Config;
 use Migrate::Dbh qw{get_dbh};
+use Lingua::EN::Inflexion qw(noun verb);
 
 sub extract_keys {
     my $hash = shift;
@@ -26,6 +27,12 @@ sub identifier_name {
     return unless $id_name;
     my $config = Migrate::Config::config;
     return get_dbh()->quote_identifier($id_name);
+}
+
+sub table_from_column {
+    (my $column = shift) =~ s/_+/ /g;
+    (my $plural = noun($column)->plural) =~ s/\s+/_/g;
+    return $plural;
 }
 
 sub join_elems { scalar(@_)? join(' ', grep { defined($_) &&  length($_ // '') } @_) : '' }

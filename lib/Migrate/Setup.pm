@@ -4,28 +4,23 @@ use strict;
 use warnings;
 use feature 'say';
 
-our $script_dir;
-
 use Migrate::Config;
-use Migrate::Factory;
 use Migrate::Dbh qw(get_dbh);
-use Module::Load;
 
 use File::Path qw(make_path);
 use File::Copy qw(copy);
-use File::Spec;
 
-use Migrate::Factory qw(create class);
+use Migrate::Factory qw(class);
 
 my $db_path = 'db';
-my $migrations_path = File::Spec->catfile($db_path, 'migrations');
+my $migrations_path = "$db_path/migrations";
 my $config_file_name = 'config.pl';
 
-my $source_templates_path = File::Spec->catfile(Migrate::Config::library_root, 'templates');
-my $source_config_path = File::Spec->catfile($source_templates_path, $config_file_name);
-my $target_config_path = File::Spec->catfile($db_path, $config_file_name);
+my $source_templates_path = Migrate::Config::library_root.'/templates';
+my $source_config_path = "$source_templates_path/$config_file_name";
+my $target_config_path = "$db_path/$config_file_name";
 my $target_config_sample_path = "$target_config_path.example";
-my $gitignore_path = File::Spec->catfile($db_path, '.gitignore');
+my $gitignore_path = "$db_path/.gitignore";
 
 sub migrations_folder_exists ();
 

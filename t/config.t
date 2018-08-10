@@ -2,14 +2,12 @@ use strict;
 use warnings;
 
 use Test::More;
-use Test::MockObject;
 use Test::MockModule;
-use Test::Trap;
 use File::Copy qw(copy);
 use File::Path qw(make_path remove_tree);
+use Cwd;
 
 use Migrate::Config;
-use Cwd;
 
 subtest 'libary_root returns the library root' => sub {
     my $pwd = Cwd::cwd;
@@ -31,7 +29,8 @@ subtest 'load_config read config.pl and returns its values' => sub {
         schema => 'SCHEMA',
         username => 'USERNAME',
         password => 'PASSWORD',
-        attr => {}
+        attr => {},
+        add_options => 1,
     });
     is(ref $callback, 'CODE');
     is(Migrate::Config::config->{schema}, 'prev value');

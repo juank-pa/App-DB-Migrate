@@ -15,9 +15,6 @@ use feature 'say';
 our $instance;
 my $driver;
 
-# TODO:
-# * Add support to create join_tables
-
 sub new {
     my ($class, $dry, $output) = @_;
     bless { dry => $dry, output => $output }, $class;

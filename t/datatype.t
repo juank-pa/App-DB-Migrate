@@ -12,7 +12,7 @@ use Migrate::Datatype;
 
 subtest 'new default implementation is always invalid' => sub {
     trap { Migrate::Datatype->new('integer') };
-    is($trap->die, "Invalid datatype: integer\n");
+    like($trap->die, qr/^Invalid datatype: integer/);
 };
 
 my $module = new Test::MockModule('Migrate::Datatype');
@@ -27,12 +27,17 @@ subtest 'new returns a valid object if the name is valid' => sub {
 
 subtest 'new is invalid if not a valid datatype' => sub {
     trap { Migrate::Datatype->new('not_valid_dt') };
-    is($trap->die, "Invalid datatype: not_valid_dt\n");
+    like($trap->die, qr/Invalid datatype: not_valid_dt/);
 };
 
 subtest 'new fallsback to a default datatype if not specified' => sub {
     my $dt = Migrate::Datatype->new();
     is($dt->name, 'string');
+};
+
+subtest 'is SQLizable' => sub {
+    my $col = Migrate::Datatype->new('integer');
+    isa_ok($col, "Migrate::SQLizable");
 };
 
 subtest 'name returns the datatype API name' => sub {
@@ -97,11 +102,6 @@ subtest 'to_sql returns the DB datatype with a precision and scale if precision 
 subtest 'to_sql returns the DB datatype name only if precision is not set and scale is set' => sub {
     my $dt = Migrate::Datatype->new('integer', { scale => 4 });
     is($dt->to_sql, 'INTEGER');
-};
-
-subtest 'Datatype stringifies to sql' => sub {
-    my $dt = Migrate::Datatype->new('integer', { limit => 4 });
-    is("$dt", 'INTEGER(4)');
 };
 
 done_testing();

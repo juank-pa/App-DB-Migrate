@@ -7,93 +7,62 @@ use Test::More;
 use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
-use MockStringifiedObject;
+use Mocks;
 
 use Migrate::Table;
 
-my $datatype = Test::MockObject->new()
-    ->mock('is_valid_datatype', sub { shift; grep /string|integer/, @_ });
-
-my $mocks = {
-    datatype => $datatype,
-    column => MockStringifiedObject->new('<COLUMN>'),
-    'Column::Timestamp' => MockStringifiedObject->new('<TIMESTAMP>'),
-    'Column::References' => MockStringifiedObject->new('<REFERENCE>'),
-    'Column::PrimaryKey' => MockStringifiedObject->new('<PK_COLUMN>')->mock('add_constraint', sub { $_[0]->{constraint} = $_[1] })
-};
-
-our $args = {};
-our $fail = 0;
-our $agregate = 0;
-
-no warnings 'redefine';
-local *Migrate::Table::class = sub { $mocks->{$_[0]} };
-local *Migrate::Table::create = sub {
-    die("Column failed\n") if $fail;
-
-    my ($type, @largs) = @_;
-    if ($agregate) { push(@{$args->{$type}}, @largs) }
-    else { $args->{$type} = \@largs }
-    return $mocks->{$type};
-};
-use warnings 'redefine';
-
-my $util = Test::MockModule->new('Migrate::Util');
-$util->mock('identifier_name', sub { 'schema.'.$_[0] });
-
-subtest 'Table new' => sub {
+subtest 'new creates a Table' => sub {
     my $th = Migrate::Table->new('my_table');
     isa_ok($th, 'Migrate::Table');
 };
 
-subtest 'Table new as a sub class' => sub {
-    @TestClass::ISA = qw{Migrate::Table};
-    my $th = TestClass->new('my_table');
-    isa_ok($th, 'TestClass');
-};
-
-subtest 'Table new dies if no table name is provided' => sub {
+subtest 'new dies if no table name is provided' => sub {
     trap { Migrate::Table->new('') };
-    is($trap->die, "Table name is needed\n");
+    like($trap->die, qr/^Table name is needed/);
 };
 
-subtest 'Table new creates a table with a primary key' => sub {
-    $args->{'Column::PrimaryKey'} = undef;
+subtest 'new creates a table with a primary key' => sub {
+    clear_factories();
     my $th = Migrate::Table->new('my_table');
     is(scalar(@{$th->columns}), 1);
-    is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', undef, { type => undef, autoincrement => 1 }]);
+    is($th->columns->[0], get_mock(ID_COL));
+    ok_factory(ID_COL, ['my_table', undef, { type => undef, autoincrement => 1 }]);
 };
 
-subtest 'Table new creates a table with a primary key and custom column' => sub {
-    $args->{'Column::PrimaryKey'} = undef;
+subtest 'new creates a table with a primary key and custom column' => sub {
+    clear_factories();
     my $th = Migrate::Table->new('my_table', { primary_key => 'my_id' });
     is(scalar(@{$th->columns}), 1);
-    is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', 'my_id', { type => undef, autoincrement => 1 }]);
+    is($th->columns->[0], get_mock(ID_COL));
+    ok_factory(ID_COL, ['my_table', 'my_id', { type => undef, autoincrement => 1 }]);
 };
 
-subtest 'Table new creates a table with a primary key and custom datatype' => sub {
-    $args->{'Column::PrimaryKey'} = undef;
+subtest 'new creates a table with a primary key and custom datatype' => sub {
+    clear_factories();
     my $th = Migrate::Table->new('my_table', { id => 'string' });
     is(scalar(@{$th->columns}), 1);
-    is($th->columns->[0], $mocks->{'Column::PrimaryKey'});
-    is_deeply($args->{'Column::PrimaryKey'}, ['my_table', undef, { type => 'string', autoincrement => 1 }]);
+    is($th->columns->[0], get_mock(ID_COL));
+    ok_factory(ID_COL, ['my_table', undef, { type => 'string', autoincrement => 1 }]);
 };
 
-subtest 'Table new creates a table without a primary key' => sub {
-    $args->{'Column::PrimaryKey'} = undef;
+subtest 'new creates a table without a primary key' => sub {
+    clear_factories();
     my $th = Migrate::Table->new('my_table', { id => 0 });
     is(scalar(@{$th->columns}), 0);
-    is($args->{'Column::PrimaryKey'}, undef);
+    ok_factory(PK, undef);
 };
 
-subtest 'Table->can reports true for generates datatype methods' => sub {
+subtest 'is SQLizable' => sub {
+    my $th = Migrate::Table->new('table');
+    isa_ok($th, "Migrate::SQLizable");
+};
+
+subtest 'can reports true for generates datatype methods' => sub {
     my $th = Migrate::Table->new('my_table');
     can_ok($th, 'string');
 };
 
-subtest 'Table generates methods for handler valid datatypes' => sub {
+subtest 'generates methods for handler valid datatypes' => sub {
     my $module = new Test::MockModule('Migrate::Table');
     my @args;
     $module->mock(column => sub { @args = @_ } );
@@ -105,10 +74,10 @@ subtest 'Table generates methods for handler valid datatypes' => sub {
     }
 };
 
-subtest 'Table does not generate methods if datatype is not valid in handler' => sub {
+subtest 'does not generate methods if datatype is not valid in handler' => sub {
     my $th = Migrate::Table->new('my_table');
     trap { $th->other('field_name', { opts => 'values' }) };
-    is($trap->die, "Invalid function: other\n");
+    like($trap->die, qr/Invalid function: other/);
 };
 
 subtest 'name returns the table name' => sub {
@@ -119,26 +88,28 @@ subtest 'name returns the table name' => sub {
 subtest 'type methods support many column names without options' => sub {
     my $th = Migrate::Table->new('my_table');
     my $col_count = scalar @{ $th->columns };
-    local ($args, $agregate) = ({}, 1);
+    clear_factories();
+    start_agregate();
 
     $th->string('first_name', 'last_name');
 
     is(scalar @{ $th->columns }, $col_count + 2);
-    is_deeply($args->{column}, ['first_name', 'string', undef,
-                                'last_name', 'string', undef]);
+    ok_factory(COL, ['first_name', 'string', undef, 'last_name', 'string', undef]);
+    end_agregate();
 };
 
 subtest 'type methods support many column names with options' => sub {
     my $th = Migrate::Table->new('my_table');
     my $col_count = scalar @{ $th->columns };
     my $options = { any => 'Hello', null => 0 };
-    local ($args, $agregate) = ({}, 1);
+    clear_factories();
+    start_agregate();
 
     $th->integer('age', 'count', $options);
 
     is(scalar @{ $th->columns }, $col_count + 2);
-    is_deeply($args->{column}, ['age', 'integer', $options,
-                                'count', 'integer', $options]);
+    ok_factory(COL, ['age', 'integer', $options, 'count', 'integer', $options]);
+    end_agregate();
 };
 
 subtest 'column creates a column receiving a name and a datatype' => sub {
@@ -148,15 +119,15 @@ subtest 'column creates a column receiving a name and a datatype' => sub {
     $th->column('my_col', 'integer', $options);
 
     is(scalar @{ $th->columns }, $col_count + 1);
-    is_deeply($th->columns->[-1], $mocks->{column});
-    is_deeply($args->{column}, ['my_col', 'integer', $options]);
+    is_deeply($th->columns->[-1], get_mock(COL));
+    ok_factory(COL, ['my_col', 'integer', $options]);
 };
 
 subtest 'column dies if column fails' => sub {
-    local $fail = 1;
     my $th = Migrate::Table->new('my_table', { id => 0 });
+    fail_factory();
     trap { $th->column('anything', 'string') };
-    is($trap->die, "Column failed\n");
+    is($trap->die, "Test issue\n");
 };
 
 subtest 'timestamps creates timestamps columns' => sub {
@@ -164,14 +135,16 @@ subtest 'timestamps creates timestamps columns' => sub {
     my $col_count = scalar @{ $th->columns };
     my $options = { any => 'Hello', null => 0 };
 
-    local ($args, $agregate) = ({}, 1);
+    clear_factories();
+    start_agregate();
     $th->timestamps($options);
 
     is(scalar @{ $th->columns }, $col_count + 2);
-    is_deeply($th->columns->[-1], $mocks->{'Column::Timestamp'});
-    is_deeply($th->columns->[-2], $mocks->{'Column::Timestamp'});
-    is_deeply($args->{'Column::Timestamp'}, ['updated_at', $options,
-                                             'created_at', $options]);
+    is_deeply($th->columns->[-1], get_mock(TS));
+    is_deeply($th->columns->[-2], get_mock(TS));
+    ok_factory(TS, ['updated_at', $options, 'created_at', $options]);
+
+    end_agregate();
 };
 
 subtest 'references creates and pushes a reference column' => sub {
@@ -181,52 +154,68 @@ subtest 'references creates and pushes a reference column' => sub {
     $th->references('my_column', $options);
 
     is(scalar @{ $th->columns }, $col_count + 1);
-    is_deeply($th->columns->[-1], $mocks->{'Column::References'});
-    is_deeply($args->{'Column::References'}, ['my_table', 'my_column', $options]);
+    is_deeply($th->columns->[-1], get_mock(REF));
+    ok_factory(REF, ['my_table', 'my_column', $options]);
 };
 
 subtest 'to_sql returns a SQL representation of a create table without primary key' => sub {
     my $th = Migrate::Table->new('my_table', { id => 0 });
     $th->column('my_column', 'string');
-    is($th->to_sql, 'CREATE TABLE schema.my_table (<COLUMN>)');
+    is($th->to_sql, 'CREATE TABLE my_table (<COLUMN>)');
 };
 
 subtest 'to_sql returns a SQL representation of a create table statement' => sub {
     my $th = Migrate::Table->new('my_table');
     $th->column('my_column', 'string');
-    is($th->to_sql, 'CREATE TABLE schema.my_table (<PK_COLUMN>,<COLUMN>)');
+    is($th->to_sql, 'CREATE TABLE my_table (<ID_COL>,<COLUMN>)');
 };
 
 subtest 'to_sql returns a SQL representation of a table with options' => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock('config', { add_options => 1 });
+
     my $th = Migrate::Table->new('my_table', { options => 'my options' });
     $th->column('my_column', 'string');
     $th->column('my_column', 'integer');
-    is($th->to_sql, 'CREATE TABLE schema.my_table (<PK_COLUMN>,<COLUMN>,<COLUMN>) my options');
+    is($th->to_sql, 'CREATE TABLE my_table (<ID_COL>,<COLUMN>,<COLUMN>) my options');
+};
+
+subtest 'to_sql returns a SQL representation of a table without options if configured' => sub {
+    my $config = new Test::MockModule('Migrate::Config');
+    $config->mock('config', { add_options => 0 });
+
+    my $th = Migrate::Table->new('my_table', { options => 'my options' });
+    $th->column('my_column', 'string');
+    $th->column('my_column', 'integer');
+    is($th->to_sql, 'CREATE TABLE my_table (<ID_COL>,<COLUMN>,<COLUMN>)');
 };
 
 subtest 'to_sql returns a SQL representation of a table with timestamps' => sub {
-    my $th = Migrate::Table->new('my_table', { options => 'my options' });
+    my $th = Migrate::Table->new('my_table');
     $th->column('my_column', 'string');
     $th->timestamps;
-    is($th->to_sql, 'CREATE TABLE schema.my_table (<PK_COLUMN>,<COLUMN>,<TIMESTAMP>,<TIMESTAMP>) my options');
+    is($th->to_sql, 'CREATE TABLE my_table (<ID_COL>,<COLUMN>,<TIMESTAMP>,<TIMESTAMP>)');
 };
 
 subtest 'to_sql returns a SQL representation of a table with references' => sub {
-    my $th = Migrate::Table->new('my_table', { options => 'my options' });
+    my $th = Migrate::Table->new('my_table');
     $th->column('my_column', 'string');
     $th->references('dept');
-    is($th->to_sql, 'CREATE TABLE schema.my_table (<PK_COLUMN>,<COLUMN>,<REFERENCE>) my options');
+    is($th->to_sql, 'CREATE TABLE my_table (<ID_COL>,<COLUMN>,<REF>)');
 };
 
 subtest 'to_sql returns a SQL representation of a temporary table' => sub {
     my $th = Migrate::Table->new('my_table', { temporary => 1 });
-
-    no warnings 'redefine';
-    local *Migrate::Table::temporary = sub { 'TEMPORARY' };
-    use warnings 'redefine';
+    my $table = new Test::MockModule('Migrate::Table');
+    $table->mock('temporary', 'TEMP');
 
     $th->column('my_column', 'string');
-    is($th->to_sql, 'CREATE TEMPORARY TABLE schema.my_table (<PK_COLUMN>,<COLUMN>)');
+    is($th->to_sql, 'CREATE TEMP TABLE my_table (<ID_COL>,<COLUMN>)');
+};
+
+subtest 'to_sql returns a SQL representation of a tebla using as syntax' => sub {
+    my $th = Migrate::Table->new('my_table', { as => 'SELECT * FROM other_table' });
+    is($th->to_sql, 'CREATE TABLE my_table AS SELECT * FROM other_table');
 };
 
 done_testing();

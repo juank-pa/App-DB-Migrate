@@ -19,7 +19,7 @@
     #
     # Uncomment the following line if you want to show the options at the end of
     # the CREATE TABLE statements. Options are added using the options key in create_table.
-    # add_options => 1,
+    add_options => 1,
     #
     # Some DBAs support a dbspace after the table/index definition.
     # Uncomment this line if this is the case.

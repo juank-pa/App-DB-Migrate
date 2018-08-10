@@ -2,20 +2,18 @@ package Migrate::Index;
 
 use parent qw(Migrate::SQLizable);
 
+use Migrate::Util;
 use Migrate::Factory qw(id);
-
-# TODO:
-# * Revisit using (not supported everywhere, and position)
 
 sub new {
     my ($class, $table, $columns, $options) = @_;
     use feature 'say';
     my $data = {
-        table => $table || die("Table name is needed\n"),
+        table => $table || die('Table name is needed'),
         columns => ref($columns) eq 'ARRAY'? $columns : [$columns],
         options => $options || {}
     };
-    die ("Column is needed") if !$columns;
+    die ('Column is needed') unless $columns;
     return bless($data, $class);
 }
 

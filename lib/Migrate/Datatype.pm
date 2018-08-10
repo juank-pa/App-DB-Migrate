@@ -6,9 +6,7 @@ use warnings;
 use Scalar::Util qw(weaken);
 use Migrate::Dbh qw{get_dbh};
 
-use overload
-    fallback => 1,
-    '""' => \&to_sql;
+use parent qw(Migrate::SQLizable);
 
 # Static methods
 sub new {
@@ -17,7 +15,7 @@ sub new {
         name => $name || $class->default_datatype,
         options => $options };
 
-    die("Invalid datatype: $name\n") if !$class->is_valid_datatype($data->{name});
+    die("Invalid datatype: $name") if !$class->is_valid_datatype($data->{name});
     return bless($data, $class);
 }
 

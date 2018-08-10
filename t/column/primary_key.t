@@ -4,132 +4,122 @@ use warnings;
 use lib 't/lib';
 
 use Test::More;
-use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
-use MockStringifiedObject;
+use Mocks;
 
 use Migrate::Column::PrimaryKey;
 
-my $datatype = MockStringifiedObject->new('<DATATYPE>')
-    ->mock('is_valid_datatype', sub { shift; $_[0] && grep /^string|integer$/, @_ });
+get_mock(COL)
+    ->set_false('add_constraint');
 
-my $mocks = {
-    datatype => $datatype,
-    'Constraint::PrimaryKey' => MockStringifiedObject->new('<PK_CONSTRAINT>'),
-};
-my $args = {};
-
-our $fail = 0;
-
-no warnings 'redefine';
-local *Migrate::Column::PrimaryKey::class = sub { $datatype if $_[0] eq 'datatype' };
-local *Migrate::Column::PrimaryKey::create = sub {
-    die("Failure\n") if $fail;
-
-    my ($type, @args) = @_;
-    $args->{$type} = \@args;
-    return $mocks->{$type};
-};
-local *Migrate::Column::create = *Migrate::Column::PrimaryKey::create;
-use warnings 'redefine';
-
-my $util = Test::MockModule->new('Migrate::Util');
-$util->mock('identifier_name', sub { 'schema.'.$_[0] });
-
-subtest 'PrimaryKey new creates a primary key column' => sub {
+subtest 'new creates a primary key column' => sub {
     my $pk = Migrate::Column::PrimaryKey->new('my_table');
     isa_ok($pk, 'Migrate::Column::PrimaryKey');
-    isa_ok($pk, 'Migrate::Column');
 };
 
-subtest 'PrimaryKey new fails if table name not set' => sub {
+subtest 'new fails if table name not set' => sub {
     trap { Migrate::Column::PrimaryKey->new('') };
-    is($trap->die, "Table name needed\n");
+    like($trap->die, qr/^Table name needed/);
 };
 
-subtest 'PrimaryKey sets the column name to id if not provided' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table');
-    is($pk->name, 'id');
-};
+subtest 'new sets the column name to config-based id if not provided' => sub {
+    Migrate::Column::PrimaryKey->new('my_table');
+    ok_factory_nth(COL, 0, 'id');
 
-subtest 'PrimaryKey sets the column name to a custom name if provided' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'my_id_custom');
-    is($pk->name, 'my_id_custom');
-};
-
-subtest 'PrimaryKey sets the column dataype to integer if not provided' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { limit => 1, other => 3 });
-    is_deeply($args->{'datatype'}, ['integer', { limit => 1 }]);
-};
-
-subtest 'PrimaryKey sets the column dataype to a custom type if provided' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { limit => 1, type => 'string' });
-    is_deeply($args->{'datatype'}, ['string', { limit => 1 }]);
-};
-
-subtest 'PrimaryKey new creates a primary key column with a primary key constraint' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table');
-    is($pk->primary_key_constraint, $mocks->{'Constraint::PrimaryKey'});
-    is($pk->constraints->[-1], $mocks->{'Constraint::PrimaryKey'});
-    is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'id', {}]);
-};
-
-subtest 'PrimaryKey new passes autoincrement to constraint' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { autoincrement => 1 });
-    is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'id', { autoincrement => 1 }]);
-};
-
-subtest 'PrimaryKey new does not pass autoincrement to constraint if unsupported type' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { autoincrement => 1, type => 'string' });
-    is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'id', { }]);
-};
-
-subtest 'PrimaryKey passes constraint as the constraint name' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { name => 'my_pk_constraint' });
-    is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'id', { name => 'my_pk_constraint' }]);
-};
-
-subtest 'PrimaryKey passes a custom column name to constraint' => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'custom_column');
-    is_deeply($args->{'Constraint::PrimaryKey'}, ['my_table', 'custom_column', { }]);
-};
-
-subtest 'name depends on config' => sub {
     my $config = new Test::MockModule('Migrate::Config');
     $config->mock(id => 'any_id');
-
-    my $pk = Migrate::Column::PrimaryKey->new('my_table');
-    is($pk->name, 'any_id');
+    Migrate::Column::PrimaryKey->new('my_table');
+    ok_factory_nth(COL, 0, 'any_id');
 };
 
-subtest 'table returns the table name', => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'custom_column' });
-    is($pk->table, 'my_table');
+subtest 'new sets the column name to a custom name if provided' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', 'my_id_custom');
+    ok_factory_nth(COL, 0, 'my_id_custom');
+};
+
+subtest 'new sets the column dataype to integer if not provided' => sub {
+    Migrate::Column::PrimaryKey->new('my_table');
+    ok_factory_nth(COL, 1, 'integer');
+};
+
+subtest 'new sets the column dataype to a custom type if provided' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { type => 'whatever_type' });
+    ok_factory_nth(COL, 1, 'whatever_type');
+
+    Migrate::Column::PrimaryKey->new('my_table', 'col', { type => 'whatever_type' });
+    ok_factory_nth(COL, 1, 'whatever_type');
+};
+
+subtest 'new passes options to column' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { any => 'option' });
+    ok_factory_nth(COL, 2, { any => 'option' });
+
+    Migrate::Column::PrimaryKey->new('my_table', 'col', { other => 'option' });
+    ok_factory_nth(COL, 2, { other => 'option' });
+};
+
+subtest 'new adds a primary key constraint' => sub {
+    my $pkc;
+    get_mock(COL)->mock('add_constraint', sub { $pkc = $_[1] });
+    Migrate::Column::PrimaryKey->new('my_table');
+    is($pkc, get_mock(PK));
+};
+
+subtest 'new passes the table name to the primary key constraint' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { autoincrement => 1 });
+    ok_factory_nth(PK, 0, 'my_table');
+};
+
+subtest 'new passes the column name to the primary key constraint' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', 'my_column_name', { autoincrement => 1 });
+    ok_factory_nth(PK, 1, 'my_column_name');
+};
+
+subtest 'new sets primary key constraint to autoincrement when integer and bigint' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { autoincrement => 1 });
+    ok_factory_nth(PK, 2, { autoincrement => 1 });
+
+    clear_factories();
+    get_mock(DATATYPE)->mock('name', sub { 'bigint' });
+    Migrate::Column::PrimaryKey->new('my_table', { autoincrement => 1 });
+    ok_factory_nth(PK, 2, { autoincrement => 1 });
+};
+
+subtest 'new does not set primary key constraint to autoincrement when any other type' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { type => 'string', autoincrement => 1 });
+    ok_factory_nth(PK, 2, { });
+};
+
+subtest 'new sets a custom name for the primary key constraint' => sub {
+    Migrate::Column::PrimaryKey->new('my_table', { name => 'custom_name' });
+    ok_factory_nth(PK, 2, { name => 'custom_name' });
+};
+
+subtest 'delegates methods to column' => sub {
+    my @methods = qw(name options type constraints index to_sql);
+    my $pk = Migrate::Column::PrimaryKey->new('my_table', { name => 'custom_name' });
+
+    for my $method (@methods) {
+        get_mock(COL)->mock($method, sub { "Called $method" });
+        is($pk->$method(), "Called $method", "Method $method was not delegated");
+    }
+};
+
+subtest 'is SQLizable' => sub {
+    my $pk = Migrate::Column::PrimaryKey->new('table');
+    isa_ok($pk, "Migrate::SQLizable");
 };
 
 subtest 'autoincrements returns the constraint autoincrements', => sub {
-    my $constraint = Test::MockObject->new()->mock('autoincrements', sub { 'ANYTHING' });
-    local $mocks->{'Constraint::PrimaryKey'} = $constraint;
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', { column => 'custom_column' });
+    my $pk = Migrate::Column::PrimaryKey->new('my_table');
+    get_mock(PK)->mock('autoincrements', sub { 'ANYTHING' });
     is($pk->autoincrements, 'ANYTHING');
 };
 
-subtest 'to_sql returns SQL representation of primary key', => sub {
+subtest 'primary_key_constraint returns the pk constraint', => sub {
     my $pk = Migrate::Column::PrimaryKey->new('my_table');
-    is($pk->to_sql, 'id <DATATYPE> <PK_CONSTRAINT>');
-};
-
-subtest 'to_sql returns SQL representation of primary key with custom column', => sub {
-    my $pk = Migrate::Column::PrimaryKey->new('my_table', 'my_column');
-    is($pk->to_sql, 'my_column <DATATYPE> <PK_CONSTRAINT>');
-};
-
-subtest 'to_sql returns SQL representation of primary key with config overridden column', => sub {
-    my $config = new Test::MockModule('Migrate::Config');
-    $config->mock(id => 'any_id');
-    my $pk = Migrate::Column::PrimaryKey->new('my_table');
-    is($pk->to_sql, 'any_id <DATATYPE> <PK_CONSTRAINT>');
+    is($pk->primary_key_constraint, get_mock(PK));
 };
 
 done_testing();

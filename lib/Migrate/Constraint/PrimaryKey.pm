@@ -3,16 +3,14 @@ package Migrate::Constraint::PrimaryKey;
 use strict;
 use warnings;
 
-use Migrate::Util;
-
 use parent qw(Migrate::Constraint);
 
 sub new {
     my ($class, $table, $column, $options) = @_;
     my $data = $class->SUPER::new($options);
-    $data->{table} = $table || die("Table name needed\n"),
-    $data->{column} = $column || die("Column name needed\n"),
-    return bless($data, $class);
+    $data->{table} = $table || die('Table name needed'),
+    $data->{column} = $column || die('Column name needed'),
+    return $data;
 }
 
 sub primary_key { 'PRIMARY KEY' }
