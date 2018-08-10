@@ -11,5 +11,6 @@ WriteMakefile(
     },
     PREREQ_PM => {
         'Lingua::EN::Inflexion' => '0',
+        'DBI' => '1.641',
     },
 );
