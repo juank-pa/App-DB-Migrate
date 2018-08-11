@@ -7,7 +7,6 @@ use Lingua::EN::Inflexion qw(noun verb);
 
 use Migrate::SQLite::Editor::Index;
 use Migrate::SQLite::Editor::Column;
-use Migrate::SQLite::Editor::Util qw(get_id_re string_re name_re);
 use Migrate::SQLite::Editor::Parser qw(parse_column);
 use Migrate::Util;
 use Migrate::Factory qw(create class id column);
@@ -15,9 +14,9 @@ use Migrate::Factory qw(create class id column);
 use feature 'say';
 
 sub new {
-    my ($class, $prefix, $postfix, @columns) = @_;
+    my ($class, $name, $postfix, @columns) = @_;
     my $data = {
-        prefix => $prefix,
+        name => $name,
         postfix => $postfix,
         columns => [@columns],
         changes => 0,
@@ -40,25 +39,13 @@ sub _insert_column_names {
 
 sub rename {
     my $self = shift;
-    my $new_name = id(shift);
+    my $new_name = shift;
     my $prev_name = $self->name;
-    my $re = _name_re();
-    $self->{prefix} =~ s/$re/$+{prefix}$new_name/;
-    return 'ALTER TABLE '.id($prev_name).' RENAME TO '.$new_name;
+    $self->{name} = $new_name;
+    return 'ALTER TABLE '.id($prev_name).' RENAME TO '.id($new_name);
 }
 
-sub _name_re {
-    my $table_re = get_id_re('table');
-    return qr/^(?<prefix>create\s+table\s+)(?:$table_re)/i;
-}
-
-sub name {
-    my $self = shift;
-    my $name_re = get_id_re('table');
-    $self->{prefix} =~ /\s*create\s+table\s*$name_re/io;
-    (my $name = $+{qtable} || $+{utable}) =~ s/""/"/g;
-    return $name;
-}
+sub name { $_[0]->{name} }
 
 sub indexes { $_[0]->{indexes} }
 
@@ -210,7 +197,10 @@ sub _column_list {
 
 sub has_changed { $_[0]->{changed} }
 
-sub table_sql { my $self = shift; ($self->{prefix}.join(',', @{ $self->{columns} }).$self->{postfix}) }
+sub table_sql {
+    my $self = shift;
+    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).$self->{postfix};
+}
 
 sub to_sql {
     my $self = shift;

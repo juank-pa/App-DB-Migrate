@@ -8,20 +8,20 @@ BEGIN {
     our @EXPORT_OK = qw(parse_table parse_column parse_index parse_constraint parse_datatype);
 }
 
-use Migrate::SQLite::Editor::Util qw(:all);
+use Migrate::SQLite::Editor::Util qw(unquote trim);
 use Migrate::SQLite::Editor::Datatype;
 use Migrate::SQLite::Editor::Constraint;
 
-my $datatypes_str = join('|', %Migrate::SQLite::Editor::Datatype::datatypes);
+my $datatypes_str = join('|', keys %Migrate::SQLite::Editor::Datatype::datatypes);
 my $attributes_re = qr/\((?<opts>[^)]+)\)/io;
 
-our $squoted_re = qr/'(?:[^']++|'')*+'/;
-our $dquoted_re = qr/"(?:[^"]++|"")*+"/;
+my $squoted_re = qr/'(?:[^']++|'')*+'/;
+my $dquoted_re = qr/"(?:[^"]++|"")*+"/;
 
-our $id_re = qr/$dquoted_re|\w+/; #identifier
-our $quoted_re = qr/$squoted_re|$dquoted_re/; #quoted
-our $paren_re = qr/(\((?:[^()"']++|$quoted_re|(?-1))*+\))/; #parenthesis
-our $column = qr/((?:[^("',]++|$paren_re|$quoted_re)++),?/;
+my $id_re = qr/$dquoted_re|\w+/; #identifier
+my $quoted_re = qr/$squoted_re|$dquoted_re/; #quoted
+my $paren_re = qr/(\((?:[^()"']++|$quoted_re|(?-1))*+\))/; #parenthesis
+my $column = qr/((?:[^("',]++|$paren_re|$quoted_re)++),?/;
 
 sub _get_columns {
     my ($str, @cols) = (shift);
@@ -31,12 +31,12 @@ sub _get_columns {
 
 sub parse_table {
     my $sql = shift;
-    $sql =~ s/^([^\(]+\()//;
-    my $prefix = $1;
+    $sql =~ s/^\s*create\s+table(?:\s+(\w+)|\s*($dquoted_re))\s*\(//i;
+    my $name = unquote($1 || $2);
     $sql =~ s/(\)[^\)]*)$//;
     my $postfix = $1;
     my @columns = map { parse_column($_) } _get_columns($sql);
-    return Migrate::SQLite::Editor::Table->new($prefix, $postfix, @columns);
+    return Migrate::SQLite::Editor::Table->new($name, $postfix, @columns);
 }
 
 sub parse_column {
@@ -44,23 +44,17 @@ sub parse_column {
     my @tokens = _get_tokens($sql);
     my $name = _parse_name(shift(@tokens)) // die("Needs valid column name in SQL: $sql");
     my $datatype = _parse_datatype(\@tokens);
-    use Data::Dumper;
-    use feature 'say';
-    say(Dumper(\@tokens)) if $name =~ /artist_id/;
     my @constraints = _parse_constraints(\@tokens);
     return Migrate::SQLite::Editor::Column->new($name, $datatype, @constraints);
 }
 
 sub parse_index {
     my $sql = shift;
-    my $index_re = get_id_re('index');
-    my $table_re = get_id_re('table');
-    use Data::Dumper;
-    $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*$index_re\s*on\s*$table_re\s*\((?<cols>.*)\)/i;
-    my $name = $+{uindex} || $+{qindex};
-    my $table = $+{utable} || $+{qtable};
-    my $options = { unique => $+{unique} };
-    my $columns = [ map { trim($_) } split(',', $+{cols}) ];
+    $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*(?<index>$id_re)\s*on\s*(?<table>$id_re)\s*\((?<cols>.*)\)/i;
+    my $name = unquote($+{index});
+    my $table = unquote($+{table});
+    my $options = { unique => !!$+{unique} };
+    my $columns = [ map { unquote(trim($_)) } split(',', $+{cols}) ];
     return Migrate::SQLite::Editor::Index->new($name, $table, $columns, $options);
 }
 
@@ -120,7 +114,7 @@ sub _parse_constraint {
     my @pred;
     if ($type =~ /^not$/i && $tokens->[0] =~ /^null$/i) {
         $type .= ' '.shift(@$tokens);
-        @pred = splice(@$tokens, 0, 3) if ($tokens->[0] && $tokens->[0] =~ /^on$/);
+        @pred = splice(@$tokens, 0, 3) if $tokens->[0] && $tokens->[0] =~ /^on$/;
     }
     push @pred, shift(@$tokens) if ($type =~ /^default$/i);
     @pred = _parse_foreign_key($tokens) if ($type =~ /^references$/i);
