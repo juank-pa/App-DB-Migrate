@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME => 'Migrate',
     VERSION_FROM => 'lib/Migrate.pm',
-    test => { TESTS => 't/*.t t/*/*.t' },
+    test => { TESTS => 't/*.t t/*/*.t t/*/*/*.t' },
     MIN_PERL_VERSION => '5.10.1',
     TEST_REQUIRES => {
         'Test::MockObject' => '0',

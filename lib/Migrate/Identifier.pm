@@ -5,6 +5,8 @@ use warnings;
 
 use parent qw(Migrate::SQLizable);
 
+use Migrate::Util;
+
 sub new {
     my $class = shift;
     my $name = shift;

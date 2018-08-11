@@ -4,8 +4,6 @@ use warnings;
 use lib 't/lib';
 
 use Test::More;
-use Test::MockObject;
-use Test::MockModule;
 use Test::Trap;
 
 use Migrate::SQLite::Editor::Datatype;

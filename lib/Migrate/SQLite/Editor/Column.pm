@@ -6,7 +6,7 @@ use warnings;
 use parent qw(Migrate::SQLizable);
 
 use Migrate::SQLite::Editor::Util qw(trim);
-use Migrate::SQLite::Editor::Parser qw(parse_constraint parse_datatype);
+use Migrate::SQLite::Editor::Parser qw(parse_constraint);
 use Migrate::SQLite::Editor::Datatype;
 use Migrate::Factory qw(create class foreign_key datatype);
 use Migrate::Util;
@@ -27,16 +27,6 @@ sub rename {
 
 sub type { $_[0]->{datatype} }
 sub constraints { $_[0]->{constraints} }
-
-sub change_datatype {
-    my ($self, $datatype, $options) = @_;
-    my $prev_datatype = $self->type;
-    my $datatype_obj = datatype($datatype, $options);
-    return if $datatype eq $prev_datatype->name && $datatype_obj->build_attrs() eq $prev_datatype->attrs_sql;
-
-    $self->{datatype} = parse_datatype($datatype_obj);
-    return 1;
-}
 
 sub is_null { !$_[0]->_select_constraint('not null') }
 

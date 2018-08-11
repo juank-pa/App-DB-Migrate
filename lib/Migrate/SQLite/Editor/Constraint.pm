@@ -11,7 +11,7 @@ use Migrate::SQLite::Editor::Util qw(unquote);
 sub new {
     my ($class, $name, $type, @pred) = @_;
     $name = unquote($name);
-    return bless { name => $name, type => $type, pred => [@pred] }, $class;
+    return bless { name => $name, type => uc($type), pred => [@pred] }, $class;
 }
 
 sub name { $_[0]->{name} }

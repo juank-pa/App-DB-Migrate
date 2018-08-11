@@ -5,7 +5,7 @@ use warnings;
 
 BEGIN {
     use parent qw(Exporter);
-    our @EXPORT_OK = qw(parse_table parse_column parse_index parse_constraint parse_datatype);
+    our @EXPORT_OK = qw(parse_table parse_column parse_index parse_constraint parse_datatype get_tokens);
 }
 
 use Migrate::SQLite::Editor::Util qw(unquote trim);
@@ -41,8 +41,8 @@ sub parse_table {
 
 sub parse_column {
     my $sql = shift;
-    my @tokens = _get_tokens($sql);
-    my $name = _parse_name(shift(@tokens)) // die("Needs valid column name in SQL: $sql");
+    my @tokens = get_tokens($sql);
+    my $name = _parse_name(shift(@tokens)) // die("Needs column name in SQL: $sql");
     my $datatype = _parse_datatype(\@tokens);
     my @constraints = _parse_constraints(\@tokens);
     return Migrate::SQLite::Editor::Column->new($name, $datatype, @constraints);
@@ -58,10 +58,9 @@ sub parse_index {
     return Migrate::SQLite::Editor::Index->new($name, $table, $columns, $options);
 }
 
-sub parse_datatype { _parse_datatype([ _get_tokens(shift) ]) }
-sub parse_constraint { _parse_constraint([ _get_tokens(shift) ]) }
+sub parse_constraint { _parse_constraint([ get_tokens(shift) ]) }
 
-sub _get_tokens {
+sub get_tokens {
     my $sql = shift // die('Needs column SQL');
     return grep { length($_ // '') } split /$paren_re|($quoted_re)|\s+/, $sql;
 }
@@ -96,8 +95,8 @@ sub _parse_datatype {
 
 sub _parse_constraints {
     my $tokens = shift;
-    my ($token, @constraints);
-    push @constraints, _parse_constraint($tokens) while (@$tokens);
+    my @constraints;
+    push @constraints, _parse_constraint($tokens) while @$tokens;
     return @constraints;
 }
 
@@ -109,24 +108,33 @@ sub _parse_constraint {
     my @result;
     my $name = $token =~ /^constraint$/i? shift(@$tokens) : undef;
     my $type = $name? shift(@$tokens) : $token;
-    return ($token, $name, $type) unless $type =~ /^(?:default|references|not)$/i;
+    return ($token, $name, $type) unless $type =~ /^(?:default|references|not|null)$/i;
 
     my @pred;
     if ($type =~ /^not$/i && $tokens->[0] =~ /^null$/i) {
         $type .= ' '.shift(@$tokens);
-        @pred = splice(@$tokens, 0, 3) if $tokens->[0] && $tokens->[0] =~ /^on$/;
+        @pred = _parse_null($tokens);
     }
-    push @pred, shift(@$tokens) if ($type =~ /^default$/i);
-    @pred = _parse_foreign_key($tokens) if ($type =~ /^references$/i);
+    @pred = _parse_null($tokens) if $type =~ /^null$/i;
+    push @pred, shift(@$tokens) if $type =~ /^default$/i;
+    @pred = _parse_foreign_key($tokens) if $type =~ /^references$/i;
 
     return Migrate::SQLite::Editor::Constraint->new($name, $type, @pred);
+}
+
+sub _parse_null {
+    my $tokens = shift;
+    if ($tokens->[0] && $tokens->[0] =~ /^on$/i) {
+        return splice(@$tokens, 0, 3);
+    }
+    return ();
 }
 
 sub _parse_foreign_key {
     my $tokens = shift;
     my @pred = (shift(@$tokens));
 
-    push(@pred, shift(@$tokens)) if $tokens->[0] =~ /^\(/;
+    push(@pred, shift(@$tokens)) if $tokens->[0] && $tokens->[0] =~ /^\(/;
 
     while ((my $rule = $tokens->[0] // '') =~ /^(?:on|match)$/i) {
         push @pred, splice(@$tokens, 0, 2);
@@ -141,7 +149,7 @@ sub _parse_foreign_key {
         my $def_type = shift(@$tokens);
         push @pred, $def_type;
         push @pred, shift(@$tokens) if $def_type =~ /^not$/i;
-        push @pred, splice(@$tokens, 0, 2) if $tokens->[0] =~ /^initially$/i;
+        push @pred, splice(@$tokens, 0, 2) if $tokens->[0] && $tokens->[0] =~ /^initially$/i;
     }
     return @pred;
 }

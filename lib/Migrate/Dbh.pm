@@ -18,7 +18,7 @@ our $_DBH;
 our $DefaultOptions = { PrintError => 0, RaiseError => 0, AutoCommit => 1, ChopBlanks => 1 };
 
 sub dbh_attr {
-    my $attr  = Migrate::Config::config->{attr};
+    my $attr  = Migrate::Config::config->{attr} // {};
     return { %$DefaultOptions, %$attr };
 }
 
