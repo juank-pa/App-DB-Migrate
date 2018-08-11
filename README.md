@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.org/juank-pa/Perl-Migrate.svg?branch=master)](https://travis-ci.org/juank-pa/Perl-Migrate)
 
-# Migrate
+# Migrate [![Build Status](https://travis-ci.org/juank-pa/Perl-Migrate.svg?branch=master)](https://travis-ci.org/juank-pa/Perl-Migrate)
 
 This library allows managing DB migrations using the command line. While there are other libraries out
 there that achieve this, they either come bundled with ORMs and other larger frameworks, or are SQL based
