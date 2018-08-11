@@ -9,6 +9,7 @@ WriteMakefile(
         'Test::MockObject' => '0',
         'Test::MockModule' => '0',
         'Test::Trap' => '0',
+        'DBD::SQLite' => '0',
     },
 	EXE_FILES => [
 		'migrate',
