@@ -28,7 +28,7 @@ sub _run_migrations {
     my $dry = shift;
     my @migrations = _filtered_migrations($filter, $steps);
     say('No more migrations to '.($steps == -1? 'run' : 'rollback')) && exit unless @migrations;
-    say("Dry run:\n") if $dry;
+    say("Dry run:") if $dry;
     _run_migration($_, $dry) foreach @migrations;
 }
 

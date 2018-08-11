@@ -30,6 +30,14 @@ subtest 'new is invalid if not a valid datatype' => sub {
     like($trap->die, qr/Invalid datatype: not_valid_dt/);
 };
 
+subtest 'new is valid and defaults to string if datatype looks like number' => sub {
+    my $dt = Migrate::Datatype->new(1);
+    is($dt->name, 'string');
+
+    $dt = Migrate::Datatype->new(145);
+    is($dt->name, 'string');
+};
+
 subtest 'new fallsback to a default datatype if not specified' => sub {
     my $dt = Migrate::Datatype->new();
     is($dt->name, 'string');

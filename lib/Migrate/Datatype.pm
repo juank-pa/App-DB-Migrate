@@ -5,14 +5,14 @@ use warnings;
 
 use Scalar::Util qw(weaken);
 use Migrate::Dbh qw{get_dbh};
+use Scalar::Util qw{looks_like_number};
 
 use parent qw(Migrate::SQLizable);
 
-# Static methods
 sub new {
     my ($class, $name, $options) = @_;
     my $data = {
-        name => $name || $class->default_datatype,
+        name => (!$name || looks_like_number($name)? $class->default_datatype : $name),
         options => $options };
 
     die("Invalid datatype: $name") if !$class->is_valid_datatype($data->{name});
