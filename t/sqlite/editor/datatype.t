@@ -43,7 +43,7 @@ subtest 'new creates a new datatype' => sub {
 subtest 'new creates a new datatype as long as datatype is valid' => sub {
     for my $type (keys %datatypes) {
         ok(Migrate::SQLite::Editor::Datatype->new($type));
-        ok(Migrate::SQLite::Editor::Datatype->new(lc($type)));
+        ok(Migrate::SQLite::Editor::Datatype->new(uc($type)));
     }
 };
 
@@ -59,7 +59,7 @@ subtest 'new supports undef datatypes' => sub {
 subtest 'new creates a new datatype as long as datatype is valid' => sub {
     for my $type (keys %datatypes) {
         ok(Migrate::SQLite::Editor::Datatype->new($type));
-        ok(Migrate::SQLite::Editor::Datatype->new(lc($type)));
+        ok(Migrate::SQLite::Editor::Datatype->new(uc($type)));
     }
 };
 
@@ -90,14 +90,14 @@ subtest 'name returns "string" for undef datatypes' => sub {
 subtest 'to_sql returns the datatype SQL' => sub {
     for my $type (keys %datatypes) {
         is(Migrate::SQLite::Editor::Datatype->new($type)->to_sql, $type);
-        is(Migrate::SQLite::Editor::Datatype->new(lc($type))->to_sql, lc($type));
+        is(Migrate::SQLite::Editor::Datatype->new(uc($type))->to_sql, uc($type));
     }
 };
 
 subtest 'to_sql returns the datatype SQL with attributes' => sub {
     for my $type (keys %datatypes) {
         is(Migrate::SQLite::Editor::Datatype->new($type, 12, 34)->to_sql, "$type(12,34)");
-        is(Migrate::SQLite::Editor::Datatype->new(lc($type), 3, 45)->to_sql, lc($type).'(3,45)');
+        is(Migrate::SQLite::Editor::Datatype->new(uc($type), 3, 45)->to_sql, uc($type).'(3,45)');
     }
 };
 

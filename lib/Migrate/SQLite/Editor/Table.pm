@@ -27,6 +27,8 @@ sub new {
     return bless $data, $class;
 }
 
+sub postfix { shift->{postfix} }
+
 sub columns { $_[0]->{columns} }
 sub column_names { map { $_->name } @{ $_[0]->columns } }
 
@@ -199,7 +201,7 @@ sub has_changed { $_[0]->{changed} }
 
 sub table_sql {
     my $self = shift;
-    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).$self->{postfix};
+    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).') '.$self->{postfix};
 }
 
 sub to_sql {

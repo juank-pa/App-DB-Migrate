@@ -38,11 +38,11 @@ sub new {
     my ($class, $name, @attrs) = @_;
     die ("Invalid datatype: $name") if $name && !exists($datatypes{uc($name)});
     @attrs = grep { defined($_) } @attrs;
-    return bless { name => $name // '', attrs => [@attrs] }, $class;
+    return bless { name => uc($name // ''), attrs => [@attrs] }, $class;
 }
 
 sub native_name { $_[0]->{name} }
-sub name { $datatypes{uc($_[0]->{name})} // 'string' }
+sub name { $datatypes{$_[0]->{name}} // 'string' }
 sub attrs_sql { join(',', @{ $_[0]->{attrs} }) }
 
 sub to_sql {

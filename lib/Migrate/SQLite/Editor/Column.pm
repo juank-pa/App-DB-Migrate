@@ -13,7 +13,11 @@ use Migrate::Util;
 
 sub new {
     my ($class, $name, $datatype, @constraints) = @_;
-    my $data = { name => $name, datatype => $datatype, constraints => [@constraints] };
+    my $data = {
+        name => $name,
+        datatype => $datatype // Migrate::SQLite::Editor::Datatype->new,
+        constraints => [@constraints]
+    };
     return bless $data, $class;
 }
 
