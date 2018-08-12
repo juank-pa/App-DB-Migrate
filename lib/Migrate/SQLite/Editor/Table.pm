@@ -201,7 +201,8 @@ sub has_changed { $_[0]->{changed} }
 
 sub table_sql {
     my $self = shift;
-    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).') '.$self->{postfix};
+    my $postfix = $self->postfix? ' '.$self->postfix : '';
+    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).')'.$postfix;
 }
 
 sub to_sql {
