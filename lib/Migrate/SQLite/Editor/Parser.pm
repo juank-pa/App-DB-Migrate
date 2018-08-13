@@ -23,16 +23,17 @@ use Migrate::SQLite::Editor::Datatype;
 use Migrate::SQLite::Editor::Constraint;
 use Migrate::SQLite::Editor::Column;
 use Migrate::SQLite::Editor::Table;
+use Migrate::SQLite::Index;
 
 my $datatypes_str = join('|', keys %Migrate::SQLite::Editor::Datatype::datatypes);
-my $attributes_re = qr/\((?<opts>[^)]+)\)/io;
+my $attributes_re = qr/\((?<opts>[^)]+)\)/;
 
 my $squoted_re = qr/'(?:[^']++|'')*+'/;
 my $dquoted_re = qr/"(?:[^"]++|"")*+"/;
 
 my $id_re = qr/$dquoted_re|\w+/; #identifier
 my $quoted_re = qr/$squoted_re|$dquoted_re/; #quoted
-my $paren_re = qr/(\((?:[^()"']++|$quoted_re|(?-1))*+\))/; #parenthesis
+my $paren_re = qr/(\((?:[^()"']++|$quoted_re|(?-1))*+\))/; #balanced parenthesis
 my $column = qr/((?:[^("',]++|$paren_re|$quoted_re)++),?/;
 
 sub split_columns {
@@ -43,7 +44,7 @@ sub split_columns {
 
 sub parse_table {
     my $sql = shift;
-    $sql =~ s/^\s*create\s+table(?:\s+(\w+)|\s*($dquoted_re))\s*\(//i;
+    $sql =~ s/^\s*create\s+table(?:\s+(\w+)|\s*($dquoted_re))\s*\(//io;
     my $name = unquote($1 || $2);
     $sql =~ s/\)\s*([^\)]*)$//;
     my $postfix = $1;
@@ -55,12 +56,14 @@ sub parse_column { parse_column_tokens([ get_tokens(shift) ]) }
 
 sub parse_index {
     my $sql = shift;
-    $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*(?<index>$id_re)\s*on\s*(?<table>$id_re)\s*\((?<cols>.*)\)/i;
+    die("Pattern coould not match: $sql") unless
+        $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*(?<index>$id_re)\s*on\s*(?<table>$id_re)\s*\((?<cols>.*)\)(?<options>.*)/io;
+    my $cols = $+{cols};
     my $name = unquote($+{index});
     my $table = unquote($+{table});
-    my $options = { unique => !!$+{unique} };
-    my $columns = [ map { unquote(trim($_)) } split(',', $+{cols}) ];
-    return Migrate::SQLite::Editor::Index->new($name, $table, $columns, $options);
+    my $options = { unique => !!$+{unique}, name => $name, options => trim($+{options})  };
+    my $columns = [ map { unquote(trim($_)) } split(',', $cols) ];
+    return Migrate::SQLite::Index->new($table, $columns, $options);
 }
 
 sub parse_constraint { parse_constraint_tokens([ get_tokens(shift) ]) }

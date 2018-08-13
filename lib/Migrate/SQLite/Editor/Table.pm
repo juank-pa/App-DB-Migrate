@@ -5,10 +5,7 @@ use warnings;
 
 use Lingua::EN::Inflexion qw(noun verb);
 
-use Migrate::SQLite::Editor::Index;
-use Migrate::SQLite::Editor::Column;
 use Migrate::SQLite::Editor::Parser qw(parse_column);
-use Migrate::Util;
 use Migrate::Factory qw(create class id column);
 
 use feature 'say';
@@ -16,7 +13,7 @@ use feature 'say';
 sub new {
     my ($class, $name, $postfix, @columns) = @_;
     my $data = {
-        name => $name,
+        name => $name || die('Table name needed'),
         postfix => $postfix,
         columns => [@columns],
         changes => 0,
@@ -109,7 +106,7 @@ sub _get_reference_column {
 sub rename_column {
     my ($self, $from, $to) = @_;
     my $column = $self->_column($from);
-    $self->_rename_indexes($from, $to);
+    $self->_rename_index_column($from, $to);
     return $self->set_changed($column->rename($to), 1, $from, $to);
 }
 
@@ -169,8 +166,8 @@ sub _remove_indexes {
     return grep { $_->has_columns } @indexes;
 }
 
-sub _rename_indexes {
-    my ($self, $column, $new_column, $indexes) = @_;
+sub _rename_index_column {
+    my ($self, $column, $new_column) = @_;
     $_->rename_column($column, $new_column) for @{ $self->indexes };
 }
 

@@ -15,6 +15,10 @@ use Migrate::SQLite::Editor::Parser qw(:all);
 my $constraint = new Test::MockModule('Migrate::Config');
 $constraint->mock('config', { dsn => 'dbi:SQLite:sample' });
 
+# NOTE: These modules works on the assumption of well formed SQL because
+# they always come from a query to sqlite_master. For that reason it doesn't
+# dies or return errors.
+
 subtest 'get_tokens tokenizes a string by keywords/literals, quoted strings and parenthesized expressions' => sub {
     my $test = qq{  this "identifier" \t and"another ""test"")"(with (complex 45 "(expr"))6.7'other''s'   (null)  };
     my $res = [ get_tokens($test) ];
@@ -349,7 +353,7 @@ subtest 'parse_table set everything after the column parenthesis as options' => 
 };
 
 subtest 'parse_table uses split_columns to split content inside parenthesis and parse_column' => sub {
-    my $input_sql = 'Input SQL';
+    my $input_sql = 'create table x(cols)';
     my $index = 0;
     my @column_sqls = ('col1 INT', 'col2');
     my @columns = (Test::MockObject->new, Test::MockObject->new);
@@ -359,7 +363,7 @@ subtest 'parse_table uses split_columns to split content inside parenthesis and 
     $parser->redefine('parse_column', sub { push(@col_params, shift); $columns[$index++] });
 
     my $tb = parse_table($input_sql);
-    is($sql_param, $input_sql); # receives sql
+    is($sql_param, 'cols'); # receives sql
     is_deeply(\@col_params, ['col1 INT', 'col2']); # receives split_columns results
     is($tb->columns->[0], $columns[0]);
     is($tb->columns->[1], $columns[1]);
@@ -372,7 +376,7 @@ subtest 'parse_index parses an index name' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
+        isa_ok($idx, 'Migrate::SQLite::Index');
         is($idx->name, 'index_name');
     }
 };
@@ -386,7 +390,6 @@ subtest 'parse_index parses an index quoted name' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
         is($idx->name, 'index"name');
     }
 };
@@ -398,7 +401,6 @@ subtest 'parse_index parses an index table_name' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
         is($idx->table, 'table_name');
     }
 };
@@ -412,7 +414,6 @@ subtest 'parse_index parses an index quoted table_name' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
         is($idx->table, 'table"name');
     }
 };
@@ -424,7 +425,6 @@ subtest 'parse_index parses an index columns' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
         is_deeply($idx->columns, [qw(col1 col2)]);
     }
 };
@@ -436,9 +436,21 @@ subtest 'parse_index parses an index quoted columns' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Editor::Index');
         is_deeply($idx->columns, [qw(col"1 col"2)]);
     }
+};
+
+subtest 'parse_index parses an index with options' => sub {
+    my $idx = parse_index('CREATE INDEX index_name ON table_name (col1) WHERE 1 ');
+    is($idx->options, 'WHERE 1');
+};
+
+# This is the only case we make it fail because this process is not token based
+# but regex based instead. We want to assure we get user feedback if the pattern
+# fails in specific edge cases.
+subtest 'parse_index dies if pattern does not match' => sub {
+    trap { parse_index('create index bad format') };
+    like($trap->die, qr/^Pattern coould not match: create index bad format/);
 };
 
 done_testing();

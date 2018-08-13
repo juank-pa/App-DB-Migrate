@@ -3,8 +3,6 @@ package Migrate::SQLite::Editor;
 use strict;
 use warnings;
 
-use Migrate::SQLite::Editor::Table;
-use Migrate::SQLite::Editor::Index;
 use Migrate::SQLite::Editor::Parser qw(parse_table parse_index);
 use Migrate::Factory qw(id);
 use Migrate::Dbh qw(get_dbh);
