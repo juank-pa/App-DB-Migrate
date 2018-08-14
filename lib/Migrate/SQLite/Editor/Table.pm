@@ -164,12 +164,12 @@ sub _copy_data_sql {
     my ($from, $to, $columns, $renames) = @_;
     my $columns_from = _column_list($columns, $renames);
     my $columns_to = _column_list($columns);
-    return qq{INSERT INTO "$to" ($columns_to) SELECT $columns_from FROM "$from"};
+    return 'INSERT INTO '.id($to)." ($columns_to) SELECT $columns_from FROM ".id($from);
 }
 
 sub _column_list {
     my ($columns, $renames) = @_;
-    my $columns_to = join(',', map { $renames->{$_}? qq{"$renames->{$_}"} : qq{"$_"}  } @$columns);
+    my $columns_to = join(',', map { $renames->{$_}? id($renames->{$_}) : id($_)  } @$columns);
 }
 
 sub _original_column_names {
@@ -189,12 +189,10 @@ sub _alter_table {
     my $orig_table = $self->name;
     my $clone_table = "_$orig_table(clone)";
 
-    $self->rename($clone_table);
-    my $table_sql = $self->_table_sql;
-    $self->rename($orig_table);
-    my $rename_sql = $self->rename_sql($clone_table, $orig_table);
+    my $table_sql = $self->_table_sql($clone_table);
     my $copy_sql = _copy_data_sql($orig_table, $clone_table, [ $self->_original_column_names ], $self->{renames});
-    my $drop_sql = qq{DROP TABLE "$orig_table"};
+    my $rename_sql = $self->rename_sql($clone_table, $orig_table);
+    my $drop_sql = 'DROP TABLE '.id($orig_table);
 
     return ($table_sql, $copy_sql, $drop_sql, $rename_sql, @{ $self->{indexes} });
 }
@@ -203,8 +201,9 @@ sub has_changed { $_[0]->{changed} }
 
 sub _table_sql {
     my $self = shift;
+    my $name = shift || $self->name;
     my $postfix = $self->postfix? ' '.$self->postfix : '';
-    return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).')'.$postfix;
+    return 'CREATE TABLE '.id($name).' ('.join(',', @{ $self->columns }).')'.$postfix;
 }
 
 sub to_sql {

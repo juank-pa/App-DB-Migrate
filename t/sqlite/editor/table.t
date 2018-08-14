@@ -99,17 +99,17 @@ subtest 'to_sql returns a CREATE TABLE SQL when no changes have been made' => su
 };
 
 subtest 'to_sql generated SQL steps to perform change if markes as changes' => sub {
-    my $column = get_column('col2');
-    my $tb = Migrate::SQLite::Editor::Table->new('tname', 'options', $column);
+    my $column = get_column('col"2');
+    my $tb = Migrate::SQLite::Editor::Table->new('t"name', 'options', $column);
     $tb->set_indexes(get_index('index_name'));
     $tb->set_changed(1);
     is_deeply(
         [$tb->to_sql],
         [
-            'CREATE TABLE "_tname(clone)" (COL<col2>) options',
-            'INSERT INTO "_tname(clone)" ("col2") SELECT "col2" FROM "tname"',
-            'DROP TABLE "tname"',
-            'ALTER TABLE "_tname(clone)" RENAME TO "tname"',
+            'CREATE TABLE "_t""name(clone)" (COL<col"2>) options',
+            'INSERT INTO "_t""name(clone)" ("col""2") SELECT "col""2" FROM "t""name"',
+            'DROP TABLE "t""name"',
+            'ALTER TABLE "_t""name(clone)" RENAME TO "t""name"',
             'CREATE IDX<index_name>'
         ]
     );
@@ -338,7 +338,7 @@ subtest 'rename_column fails if column not found' => sub {
 };
 
 subtest 'to_sql returns SQL representing column renames' => sub {
-    my @columns = map { get_column($_) } qw(col1 col2);
+    my @columns = map { get_column($_) } qw(col1 col"2);
     $columns[1]->mock('rename',
         sub {
             my $name = $_[1];
@@ -353,13 +353,13 @@ subtest 'to_sql returns SQL representing column renames' => sub {
             ->set_true('rename_column');
     } qw(index1 index2);
     $tb->set_indexes(@indexes);
-    $tb->rename_column('col2', 'new_col');
+    $tb->rename_column('col"2', 'new"col');
 
     is_deeply(
         [$tb->to_sql],
         [
-            'CREATE TABLE "_tname(clone)" (COL<col1>,COL<new_col>) options',
-            'INSERT INTO "_tname(clone)" ("col1","new_col") SELECT "col1","col2" FROM "tname"',
+            'CREATE TABLE "_tname(clone)" (COL<col1>,COL<new"col>) options',
+            'INSERT INTO "_tname(clone)" ("col1","new""col") SELECT "col1","col""2" FROM "tname"',
             'DROP TABLE "tname"',
             'ALTER TABLE "_tname(clone)" RENAME TO "tname"',
             'CREATE IDX<index1>',
@@ -466,6 +466,11 @@ subtest 'change_column_null fails if column not found' => sub {
     my $tb = Migrate::SQLite::Editor::Table->new('tname', 'options', $col);
     trap { $tb->change_column_null('col1', 'any') };
     like($trap->die, qr/^Column col1 not found in table tname/);
+};
+
+subtest 'rename_sql returns a rename SQL' => sub {
+    my $sql = Migrate::SQLite::Editor::Table->rename_sql('t1', 't"2');
+    is($sql, 'ALTER TABLE "t1" RENAME TO "t""2"');
 };
 
 done_testing();
