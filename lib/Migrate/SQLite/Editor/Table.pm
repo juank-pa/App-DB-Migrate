@@ -6,9 +6,7 @@ use warnings;
 use Lingua::EN::Inflexion qw(noun verb);
 
 use Migrate::SQLite::Editor::Parser qw(parse_column);
-use Migrate::Factory qw(create class id column);
-
-use feature 'say';
+use Migrate::Factory qw(id column);
 
 sub new {
     my ($class, $name, $postfix, @columns) = @_;
@@ -16,10 +14,11 @@ sub new {
         name => $name || die('Table name needed'),
         postfix => $postfix,
         columns => [@columns],
-        changes => 0,
         added_columns => {},
+        changed => 0,
         heavy => 0,
-        renames => {}
+        renames => {},
+        indexes => []
     };
     return bless $data, $class;
 }
@@ -29,28 +28,19 @@ sub postfix { shift->{postfix} }
 sub columns { $_[0]->{columns} }
 sub column_names { map { $_->name } @{ $_[0]->columns } }
 
-sub _insert_column_names {
-    my $self = shift;
-    my @columns = map { $_->name } @{ $self->columns };
-    return @columns unless keys %{ $self->{added_columns} };
-    return grep { !$self->{added_columns}->{$_} } @columns;
-}
+sub name { $_[0]->{name} }
+
+sub set_indexes { $_[0]->{indexes} = [splice(@_, 1)] }
+sub indexes { $_[0]->{indexes} }
 
 sub rename {
     my $self = shift;
-    my $new_name = shift;
-    my $prev_name = $self->name;
+    my $new_name = shift || die('Invalid table name');
     $self->{name} = $new_name;
-    return 'ALTER TABLE '.id($prev_name).' RENAME TO '.id($new_name);
 }
-
-sub name { $_[0]->{name} }
-
-sub indexes { $_[0]->{indexes} }
 
 sub add_raw_column {
     my ($self, $column_sql) = @_;
-    my $table = $self->name;
     my $column_obj = parse_column($column_sql);
     push(@{ $self->{columns} }, $column_obj);
     $self->{added_columns}->{$column_obj->name} = 1;
@@ -59,30 +49,27 @@ sub add_raw_column {
 
 sub remove_columns {
     my ($self, @columns) = @_;
-    my $prev_count = scalar(@{ $self->columns });
     foreach my $column (@columns) {
         $self->{columns} = [ $self->_remove_column($column) ];
         $self->{indexes} = [ $self->_remove_indexes($column) ];
     }
-    my $new_count = scalar(@{ $self->columns });
-    return $self->set_changed($new_count != $prev_count, 1);
+    return $self->set_changed(1, 1);
 }
 
 sub set_changed {
     my ($self, $changed, $heavy, $from, $to) = @_;
-    return $self unless $changed;
+    return unless $changed;
 
+    $self->{changed} = $changed;
     $self->{heavy} ||= $heavy;
-    $self->{changed} ||= $changed;
-    $self->{changes}++;
     $self->{renames}->{$to} = $from if $from && $to;
-    return $self;
+    return 1;
 }
 
 sub add_foreign_key {
     my ($self, $fk) = @_;
     my $column = $self->_column($fk->column);
-    return $self->set_changed($column->add_foreign_key($fk), 1);
+    return $self->set_changed(($column->add_foreign_key($fk)), 9, 2, 3);
 }
 
 sub remove_foreign_key {
@@ -94,7 +81,7 @@ sub remove_foreign_key {
 sub _column_with_constraint_named {
     my $self = shift;
     my $name = shift;
-    return (grep { $_->has_foreign_key && $_->foreign_key_constraint->name eq $name } @{ $self->columns })[0];
+    return (grep { $_->has_constraint_named($name) } @{ $self->columns })[0];
 }
 
 sub _get_reference_column {
@@ -110,10 +97,14 @@ sub rename_column {
     return $self->set_changed($column->rename($to), 1, $from, $to);
 }
 
+sub _column_not_found {
+    die ("Column $_[0] not found in table $_[1]");;
+}
+
 sub _column {
     my ($self, $column) = @_;
     my $index = $self->_column_index($column);
-    die ("Column $column not found on database") if $index == -1;
+    _column_not_found($column, $self->name) if $index == -1;
     return $self->columns->[$index];
 }
 
@@ -128,8 +119,9 @@ sub _column_index {
 sub change_column {
     my ($self, $column_name, $datatype, $options) = @_;
     my $index = $self->_column_index($column_name);
-    ($datatype, $options) = (undef, $datatype) if ref($datatype) eq 'HASH';
-    $self->{columns}->[$index] = (column($column_name, $datatype, $options));
+    _column_not_found($column_name, $self->name) if $index < 0;
+    ($datatype, $options) = (1, $datatype) if ref($datatype) eq 'HASH';
+    $self->{columns}->[$index] = parse_column(column($column_name, $datatype, $options));
     return $self->set_changed(1, 1);
 }
 
@@ -143,20 +135,6 @@ sub change_column_null {
     my ($self, $column_name, $null) = @_;
     my $column = $self->_column($column_name);
     return $self->set_changed($column->change_null($null), !$null);
-}
-
-sub _alter_table {
-    my $self = shift;
-    my $orig_table = $self->name;
-    my $clone_table = "_$orig_table(clone)";
-
-    $self->rename($clone_table);
-    my $table_sql = $self->table_sql;
-    my $rename_sql = $self->rename($orig_table);
-    my $copy_sql = _copy_data_sql($orig_table, $clone_table, [ $self->_insert_column_names ], $self->{renames});
-    my $drop_sql = qq{DROP TABLE "$orig_table"};
-
-    return ($table_sql, $copy_sql, $drop_sql, $rename_sql, @{ $self->{indexes} });
 }
 
 sub _remove_indexes {
@@ -173,7 +151,7 @@ sub _rename_index_column {
 
 sub _remove_column {
     my ($self, $column) = @_;
-    die("Column $column not found for table ".$self->name) unless $self->_has_column($column);
+    _column_not_found($column, $self->name) unless $self->_has_column($column);
     return grep { $_->name ne $column } @{ $self->columns };
 }
 
@@ -194,9 +172,36 @@ sub _column_list {
     my $columns_to = join(',', map { $renames->{$_}? qq{"$renames->{$_}"} : qq{"$_"}  } @$columns);
 }
 
+sub _original_column_names {
+    my $self = shift;
+    my @columns = map { $_->name } @{ $self->columns };
+    return @columns unless keys %{ $self->{added_columns} };
+    return grep { !$self->{added_columns}->{$_} } @columns;
+}
+
+sub rename_sql {
+    my ($class, $old_name, $new_name) = @_;
+    return 'ALTER TABLE '.id($old_name).' RENAME TO '.id($new_name);
+}
+
+sub _alter_table {
+    my $self = shift;
+    my $orig_table = $self->name;
+    my $clone_table = "_$orig_table(clone)";
+
+    $self->rename($clone_table);
+    my $table_sql = $self->_table_sql;
+    $self->rename($orig_table);
+    my $rename_sql = $self->rename_sql($clone_table, $orig_table);
+    my $copy_sql = _copy_data_sql($orig_table, $clone_table, [ $self->_original_column_names ], $self->{renames});
+    my $drop_sql = qq{DROP TABLE "$orig_table"};
+
+    return ($table_sql, $copy_sql, $drop_sql, $rename_sql, @{ $self->{indexes} });
+}
+
 sub has_changed { $_[0]->{changed} }
 
-sub table_sql {
+sub _table_sql {
     my $self = shift;
     my $postfix = $self->postfix? ' '.$self->postfix : '';
     return 'CREATE TABLE '.id($self->{name}).' ('.join(',', @{ $self->{columns} }).')'.$postfix;
@@ -204,7 +209,7 @@ sub table_sql {
 
 sub to_sql {
     my $self = shift;
-    return $self->has_changed? $self->_alter_table() : $self->table_sql;
+    return $self->has_changed? $self->_alter_table() : $self->_table_sql;
 }
 
 return 1;

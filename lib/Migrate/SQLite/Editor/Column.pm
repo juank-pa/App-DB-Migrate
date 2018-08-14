@@ -8,25 +8,24 @@ use parent qw(Migrate::SQLizable);
 use Migrate::SQLite::Editor::Util qw(trim);
 use Migrate::SQLite::Editor::Parser qw(parse_constraint);
 use Migrate::SQLite::Editor::Datatype;
-use Migrate::Factory qw(create class foreign_key datatype);
+use Migrate::Factory qw(datatype default id);
 use Migrate::Util;
 
 sub new {
     my ($class, $name, $datatype, @constraints) = @_;
     my $data = {
-        name => $name,
-        datatype => $datatype // Migrate::SQLite::Editor::Datatype->new,
+        name => $name || die('Column name needed'),
+        datatype => $datatype || Migrate::SQLite::Editor::Datatype->new,
         constraints => [@constraints]
     };
     return bless $data, $class;
 }
 
 sub name { $_[0]->{name} }
-sub quoted_name { (my $name = $_[0]->name) =~s/"/""/g; qq{"$name"}  }
 
 sub rename {
     my ($self, $to) = @_;
-    $self->{name} = $to;
+    $self->{name} = $to || die('Column name needed');
 }
 
 sub type { $_[0]->{datatype} }
@@ -37,37 +36,39 @@ sub is_null { !$_[0]->_select_constraint('not null') }
 sub change_null {
     my ($self, $null) = @_;
     my $is_null = $self->is_null;
-    return if !!$is_null == !!$null;
+    return if $is_null == !!$null;
 
     if ($null) { $self->_remove_constraint('not null') }
-    else { push @{ $self->{constraints} }, parse_constraint('NOT NULL') }
+    else {
+        $self->_remove_constraint('null');
+        push @{ $self->{constraints} }, parse_constraint('NOT NULL')
+    }
     return 1;
 }
 
 sub _select_constraint {
-    my ($self, $name) = @_;
-    return grep { _is_constraint($_, $name) } @{ $self->{constraints} };
+    my ($self, $type) = @_;
+    return grep { _is_constraint_typed($_, $type) } @{ $self->{constraints} };
 }
 
 sub _remove_constraint {
-    my ($self, $name) = @_;
-    $self->{constraints} = [ grep { !_is_constraint($_, $name) } @{ $self->{constraints} } ];
+    my ($self, $type) = @_;
+    $self->{constraints} = [ grep { !_is_constraint_typed($_, $type) } @{ $self->{constraints} } ];
 }
 
-sub _is_constraint {
-    my ($constraint, $name) = @_;
-    return ref($constraint) && $constraint->type =~ /^$name$/i
+sub _is_constraint_typed {
+    my ($constraint, $type) = @_;
+    return ref($constraint) && $constraint->type =~ /^$type$/i
 }
 
-sub default { $_[0]->_select_constraint('default') }
+sub default_constraint { ($_[0]->_select_constraint('default'))[0] }
 
 sub change_default {
     my ($self, $default) = @_;
-    my $prev_default = $self->default;
+    my $prev_default = $self->default_constraint;
     return if !$prev_default && !defined($default);
 
-    my $datatype = datatype($Migrate::SQLite::Editor::Datatype::datatypes{$self->type // ''} || 'string');
-    my $default_obj = $self->default($default, { type => $datatype });
+    my $default_obj = default($default, { type => datatype($self->type->name) });
     if ($prev_default) {
         if (defined $default) { $self->_update_default($prev_default, $default_obj) }
         else { $self->_remove_constraint('default') }
@@ -78,30 +79,40 @@ sub change_default {
 
 sub _update_default {
     my ($self, $prev_default, $new_default) = @_;
-    $prev_default->set_predicate([$new_default->_quoted_default_value]);
+    $prev_default->set_predicate($new_default->quoted_default_value);
 }
 
 sub _add_default {
     my ($self, $default) = @_;
-    push @{ $self->{constraints} }, parse_constraint($default);
+    push @{ $self->{constraints} }, parse_constraint($default->to_sql);
 }
 
-sub has_foreign_key { $_[0]->_select_constraint('references') }
-
-sub foreign_key_constraint { ($_[0]->has_foreign_key)[0] }
+sub foreign_key_constraint { ($_[0]->_select_constraint('references'))[0] }
 
 sub add_foreign_key {
     my ($self, $fk) = @_;
-    return if $self->has_foreign_key;
-    push @{ $self->{constraints} }, parse_constraint($fk);
+    return if $self->foreign_key_constraint;
+    my $constraint = parse_constraint($fk);
+    die('Invalid foreign key') if !$constraint || !ref($constraint) || $constraint->type !~ /references/i;
+    push @{ $self->{constraints} }, $constraint;
     return 1;
 }
 
 sub remove_foreign_key { $_[0]->_remove_constraint('references') }
 
+sub has_constraint_named {
+    my ($self, $name) = @_;
+    return grep { _is_constraint_named($_, $name) } @{ $self->{constraints} };
+}
+
+sub _is_constraint_named {
+    my ($constraint, $name) = @_;
+    return ref($constraint) && $constraint->name =~ /^$name$/i
+}
+
 sub to_sql {
     my $self = shift;
-    my @elems = ($self->quoted_name, $self->type, @{ $self->constraints });
+    my @elems = (id($self->name), $self->type, @{ $self->constraints });
     return Migrate::Util::join_elems(@elems);
 }
 

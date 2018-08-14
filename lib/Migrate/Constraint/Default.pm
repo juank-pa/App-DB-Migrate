@@ -32,7 +32,7 @@ sub is_current_timestamp { $_[0]->_hash_arg('timestamp') }
 sub true { 'TRUE' }
 sub false { 'FALSE' }
 
-sub _quoted_default_value {
+sub quoted_default_value {
     my $self = shift;
     return $self->current_timestamp if $self->is_current_timestamp;
     return $self->null unless defined($self->value);
@@ -40,6 +40,6 @@ sub _quoted_default_value {
     return $self->type->quote($self->value);
 }
 
-sub to_sql { $_[0]->_join_elems($_[0]->add_constraint($_[0]->default, $_[0]->_quoted_default_value)) }
+sub to_sql { $_[0]->_join_elems($_[0]->add_constraint($_[0]->default, $_[0]->quoted_default_value)) }
 
 return 1;

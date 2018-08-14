@@ -132,7 +132,7 @@ sub _parse_constraint_name_and_type {
 
     $name? splice(@$tokens, 0, 3) : shift(@$tokens);
     $type .= ' '.shift(@$tokens) if $type =~ /^not$/i;
-    return ($name, $type);
+    return (unquote($name), $type);
 }
 
 sub _parse_constraint_predicate {

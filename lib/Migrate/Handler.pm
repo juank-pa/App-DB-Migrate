@@ -117,8 +117,8 @@ sub irreversible {
 
 sub flush { }
 
-sub rename_index;
 sub rename_table;
+sub rename_index;
 sub rename_column;
 
 sub _add_foreign_key {

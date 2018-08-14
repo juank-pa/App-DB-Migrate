@@ -10,14 +10,18 @@ use Migrate::SQLite::Editor::Util qw(unquote);
 
 sub new {
     my ($class, $name, $type, @pred) = @_;
-    $name = unquote($name);
-    return bless { name => $name, type => uc($type), pred => [@pred] }, $class;
+    my $data = {
+        name => $name,
+        type => uc($type // die('Constraint type is needed')),
+        pred => [@pred]
+    };
+    return bless($data, $class);
 }
 
-sub name { $_[0]->{name} }
-sub type { $_[0]->{type} }
-sub predicate { $_[0]->{pred} }
-sub set_predicate { $_[0]->{pred} = $_[1] }
+sub name { shift->{name} }
+sub type { shift->{type} }
+sub predicate { shift->{pred} }
+sub set_predicate { $_[0]->{pred} = [splice(@_, 1)] }
 
 sub to_sql {
     my $self = shift;

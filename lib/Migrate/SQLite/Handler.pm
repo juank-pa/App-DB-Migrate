@@ -6,6 +6,7 @@ use warnings;
 use parent qw(Migrate::Handler);
 
 use Migrate::SQLite::Editor;
+use Migrate::SQLite::Editor::Table;
 
 sub editor_for {
     my ($self, $table_name) = @_;
@@ -50,7 +51,8 @@ sub rename_index {
 
 sub rename_table {
     my ($self, $old_name, $new_name) = @_;
-    $self->execute($self->editor_for($old_name)->rename($new_name));
+    $self->flush();
+    $self->execute(Migrate::SQLite::Editor::Table->rename_sql($old_name, $new_name));
 }
 
 sub rename_column {
