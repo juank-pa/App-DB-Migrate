@@ -169,7 +169,7 @@ sub _copy_data_sql {
 
 sub _column_list {
     my ($columns, $renames) = @_;
-    my $columns_to = join(',', map { $renames->{$_}? id($renames->{$_}) : id($_)  } @$columns);
+    my $columns_to = join(',', map { id($renames->{$_}? $renames->{$_} : $_)  } @$columns);
 }
 
 sub _original_column_names {
