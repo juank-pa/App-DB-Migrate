@@ -450,7 +450,7 @@ subtest 'parse_index parses an index with options' => sub {
 # fails in specific edge cases.
 subtest 'parse_index dies if pattern does not match' => sub {
     trap { parse_index('create index bad format') };
-    like($trap->die, qr/^Pattern coould not match: create index bad format/);
+    like($trap->die, qr/^Pattern could not match: create index bad format/);
 };
 
 done_testing();

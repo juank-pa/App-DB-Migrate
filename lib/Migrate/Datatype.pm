@@ -44,9 +44,11 @@ sub limit { $_[0]->{options}{limit} }
 sub precision { $_[0]->{options}{precision} }
 sub scale { $_[0]->{options}{scale} }
 
+sub quote_str { get_dbh()->quote($_[1]) }
+
 sub quote {
     my ($self, $value) = @_;
-    return get_dbh()->quote($value) if $self->_should_quote($self->name);
+    return $self->quote_str($value) if $self->_should_quote($self->name);
     return $value;
 }
 

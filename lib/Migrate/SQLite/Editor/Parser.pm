@@ -43,7 +43,7 @@ sub split_columns {
 }
 
 sub parse_table {
-    my $sql = shift;
+    my $sql = shift // die('Table SQL needed');
     $sql =~ s/^\s*create\s+table(?:\s+(\w+)|\s*($dquoted_re))\s*\(//io;
     my $name = unquote($1 || $2);
     $sql =~ s/\)\s*([^\)]*)$//;
@@ -55,8 +55,8 @@ sub parse_table {
 sub parse_column { parse_column_tokens([ get_tokens(shift) ]) }
 
 sub parse_index {
-    my $sql = shift;
-    die("Pattern coould not match: $sql") unless
+    my $sql = shift // die('Index SQL needed');
+    die("Pattern could not match: $sql") unless
         $sql =~ /^\s*create\s+(?<unique>unique\s+)?index\s*(?<index>$id_re)\s*on\s*(?<table>$id_re)\s*\((?<cols>.*)\)(?<options>.*)/io;
     my $cols = $+{cols};
     my $name = unquote($+{index});

@@ -8,41 +8,53 @@ use Migrate::Factory qw(id);
 use Migrate::Dbh qw(get_dbh);
 
 sub edit_table {
-    my ($table_name) = @_;
-    my $sql = _table_sql($table_name);
+    my $table_name = shift;
+    my $dbh = shift // get_dbh();
+    my $sql = _table_sql($table_name, $dbh);
     my $table = parse_table($sql);
-    $table->{indexes} = _table_indexes($table_name);
+    $table->set_indexes(_table_indexes($table_name, $dbh));
     return $table;
 }
 
 sub rename_index {
-    my ($old_name, $new_name) = @_;
-    my $index = index_by_name($old_name);
+    my $old_name = shift || die('Old index name needed');
+    my $new_name = shift || die('New index name needed');
+    my $dbh = shift // get_dbh();
+    my $index = index_by_name($old_name, $dbh);
     $index->rename($new_name);
     return ('DROP INDEX '.id($old_name), $index);
 }
 
 sub index_by_name {
-    my $index = shift;
-    my $sql = get_dbh->selectall_arrayref(qq{SELECT sql FROM sqlite_master WHERE type='index' AND name='$index'});
-    my $res = $sql && $sql->[0] && $sql->[0]->[0];
-    die("Could not find index $index") unless $res;
-    return parse_index($res);
+    my $index = shift || die('Index name needed');
+    my $dbh = shift // get_dbh();
+    my $sql = $dbh->selectall_arrayref(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND name=?",
+        undef, $index
+    ) // die("Error querying for index $index\n$@");
+    die("Could not find index $index") unless $sql->[0]->[0];
+    return parse_index($sql->[0]->[0]);
 }
 
 sub _table_sql {
     my $table = shift;
-    my $sql = get_dbh->selectall_arrayref(qq{SELECT sql FROM sqlite_master WHERE type='table' AND tbl_name='$table'});
-    my $res = $sql && $sql->[0] && $sql->[0]->[0];
-    die("Could not find table $table") unless $res;
-    return $res;
+    my $dbh = shift // get_dbh();
+    my $sql = $dbh->selectall_arrayref(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND tbl_name=?",
+        undef, $table
+    ) // die("Error querying for table $table\n$@");
+    die("Could not find table $table") unless $sql->[0]->[0];
+    return $sql->[0]->[0];
 }
 
 sub _table_indexes {
     my $table = shift;
-    my $res = get_dbh->selectall_arrayref(qq{SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='$table'});
-    die("Could not query table indexes for $table") unless $res;
-    return [map { parse_index($_->[0]) } @{ $res }];
+    my $dbh = shift // get_dbh();
+    my $res = $dbh->selectall_arrayref(
+        "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=?",
+        undef, $table
+    ) // die("Error querying indexes for table $table\n$@");
+    return map { $_->[0]? parse_index($_->[0]) : () } @{ $res };
 }
 
 return 1;

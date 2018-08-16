@@ -75,9 +75,21 @@ subtest 'scale returns the scale from initialization' => sub {
 
 sub get_dbh { Test::MockObject->new()->mock('quote', sub { "/$_[1]/" }) }
 
+subtest 'imports get_dbh from Migrate::Dbh' => sub {
+    use Migrate::Dbh;
+    is(\&Migrate::Dbh::get_dbh, \&Migrate::Datatype::get_dbh);
+};
+
+subtest 'quote_str quotes the given value unconditionally' => sub {
+    my $module = new Test::MockModule('Migrate::Datatype');
+    $module->redefine('get_dbh', get_dbh);
+    is(Migrate::Datatype->quote_str("I'm quoted"), "/I'm quoted/");
+};
+
 subtest 'quote quotes the given value depending on the datatype' => sub {
     my $dt = Migrate::Datatype->new('string');
-    my $module = new Test::MockModule('Migrate::Datatype')->mock('get_dbh', get_dbh);
+    my $module = new Test::MockModule('Migrate::Datatype');
+    $module->redefine('get_dbh', get_dbh);
     is($dt->quote(45), '/45/');
 };
 
