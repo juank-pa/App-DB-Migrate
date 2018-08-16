@@ -120,7 +120,7 @@ sub _generate_file {
 
     my $migration_name = $action eq 'generic'? $subject : "${action}_$subject";
     my $package_name = _timestamp()."_${migration_name}";
-    my %replace = _get_replacements($table, $data);
+    my %replace = _get_replacements($package_name, $table, $data);
 
     my $target_path = "db/migrations/$package_name.pl";
     my $source_path = Migrate::Config::library_root."/templates/$action.tl";
@@ -137,10 +137,11 @@ sub _generate_file {
 }
 
 sub _get_replacements {
-    my ($table_name, $data) = (shift // '', shift // {});
+    my ($package, $table_name, $data) = @_;
     return (
-        'DBTABLENAME' => $table_name,
-        %$data
+        'PACKAGE' => $package,
+        'DBTABLENAME' => $table_name // '',
+        %{ $data // {} }
     );
 }
 

@@ -5,7 +5,7 @@ use warnings;
 use feature 'say';
 
 use Migrate::Dbh qw(get_dbh);
-use Migrate::Factory qw(handler class);
+use Migrate::Factory qw(handler_manager class);
 use Data::Dumper;
 use List::Util qw(min);
 
@@ -47,50 +47,15 @@ sub _filtered_migrations {
 sub _run_migration {
     my ($migration, $dry) = @_;
     my $function = $migration->{status} eq 'down'? 'up' : 'down';
-    my $handler = handler($dry, *STDOUT);
+    my $manager = handler_manager($dry, *STDOUT);
 
-    _load_migration($migration->{path}, $migration->{package});
-
-    my $dbh = get_dbh();
-    $dbh->begin_work;
-
-    eval {
-        _run_migration_function($migration->{package}, $function, $handler);
-        _record_migration($function, $migration->{id}, $dbh) unless $dry;
-    };
-
-    return $dbh->commit unless $@;
-
-    $dbh->rollback;
-    die($@);
-}
-
-sub _load_migration {
-    my ($path, $package) = @_;
-    open(my $fh, '<', $path);
-    my $contents = do{ local $/; <$fh> };
-    eval qq{package $package; $contents};
-}
-
-sub _run_migration_function {
-    my ($package, $function, $handler) = @_;
-    my $qualified_function = "${package}::${function}";
+    require $migration->{path};
+    my $qualified_function = $migration->{package}."::$function";
 
     say('-' x (length($qualified_function) + 8));
     say("Running $qualified_function");
 
-    no strict 'refs';
-    $qualified_function->($handler);
-    use strict;
-    $handler->flush();
-}
-
-sub _record_migration {
-    my ($function, $id, $dbh) = @_;
-    my $sql = $function eq 'up'
-        ? class('migrations')->insert_migration_sql
-        : class('migrations')->delete_migration_sql;
-    $dbh->prepare($sql)->execute($id) or die("Error recording migration data ($function)");
+    $manager->execute(\&$qualified_function, $migration->{id}, $function);
 }
 
 return 1;

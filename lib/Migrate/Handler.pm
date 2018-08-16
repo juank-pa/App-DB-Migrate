@@ -12,9 +12,6 @@ use DBI;
 
 use feature 'say';
 
-our $instance;
-my $driver;
-
 sub new {
     my ($class, $dry, $output) = @_;
     bless { dry => $dry, output => $output }, $class;
@@ -114,8 +111,6 @@ sub remove_index {
 sub irreversible {
     die("Migration is irreversible!");
 }
-
-sub flush { }
 
 sub rename_table;
 sub rename_index;

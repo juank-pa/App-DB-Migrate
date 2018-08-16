@@ -6,7 +6,7 @@ use warnings;
 BEGIN {
     use Exporter;
     our @ISA = qw{Exporter};
-    our @EXPORT_OK = qw(class create column id reference timestamp table table_index null default datatype foreign_key handler id_column primary_key);
+    our @EXPORT_OK = qw(class create column id reference timestamp table table_index null default datatype foreign_key handler id_column primary_key handler_manager);
 }
 
 use Module::Load;
@@ -46,5 +46,6 @@ sub default { create('Constraint::Default', @_) }
 sub foreign_key { create('Constraint::ForeignKey', @_) }
 sub primary_key { create('Constraint::PrimaryKey', @_) }
 sub handler { create('handler', @_) }
+sub handler_manager { create('Handler::Manager', @_) }
 
 return 1;
