@@ -21,7 +21,7 @@ sub get_table {
 my $table_sql = 'CREATE TABLE test (id INTEGER PRIMARY KEY AUTOINCREMENT, col, col2)';
 my $index_sql = 'CREATE INDEX idx_test_col ON test(col)';
 
-get_dbh->do('DROP TABLE test') // die('Could not drop sample table');
+get_dbh->do('DROP TABLE IF EXISTS test') // die('Could not drop sample table');
 get_dbh->do($table_sql) // die('Could not create test table');
 get_dbh->do($index_sql) // die('Could not create test index');
 
