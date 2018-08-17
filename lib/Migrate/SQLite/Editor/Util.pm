@@ -5,7 +5,7 @@ use warnings;
 
 BEGIN {
     use parent qw(Exporter);
-    our @EXPORT_OK = qw(trim unquote undquote);
+    our @EXPORT_OK = qw(trim unquote);
 }
 
 sub trim {

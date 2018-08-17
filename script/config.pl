@@ -24,4 +24,7 @@
     # Some DBAs support a dbspace after the table/index definition.
     # Uncomment this line if this is the case.
     # dbspace => 'nsname',
+    #
+    # Use this key to change the name of the migrations maintainance table
+    # migrations_table => '_migrations',
 }
