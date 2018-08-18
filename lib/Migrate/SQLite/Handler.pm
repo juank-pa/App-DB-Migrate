@@ -32,17 +32,6 @@ sub drop_table { my $self = shift; $self->flush()->SUPER::drop_table(@_) }
 sub add_index { my $self = shift; $self->flush()->SUPER::add_index(@_) }
 sub remove_index { my $self = shift; $self->flush()->SUPER::remove_index(@_) }
 
-sub add_raw_column {
-    my ($self, $table, $column) = @_;
-    return $self->flush()->SUPER::add_raw_column($table, $column) unless $self->has_editor_for($table);
-    $self->editor_for($table)->add_raw_column($column);
-}
-
-sub remove_column {
-    my ($self, $table, $column) = @_;
-    $self->editor_for($table)->remove_columns($column);
-}
-
 sub rename_index {
     my ($self, undef, $old_name, $new_name) = @_;
     $self->flush();
@@ -53,6 +42,17 @@ sub rename_table {
     my ($self, $old_name, $new_name) = @_;
     $self->flush();
     $self->execute(Migrate::SQLite::Editor::Table->rename_sql($old_name, $new_name));
+}
+
+sub add_raw_column {
+    my ($self, $table, $column) = @_;
+    return $self->flush()->SUPER::add_raw_column($table, $column) unless $self->has_editor_for($table);
+    $self->editor_for($table)->add_raw_column($column);
+}
+
+sub remove_column {
+    my ($self, $table, $column) = @_;
+    $self->editor_for($table)->remove_columns($column);
 }
 
 sub rename_column {
@@ -82,7 +82,7 @@ sub change_column_default {
 
 sub change_column_null {
     my ($self, $table, $column_name, $null) = @_;
-    $self->editor_for($table)->change_column_default($column_name, $null);
+    $self->editor_for($table)->change_column_null($column_name, $null);
 }
 
 return 1;
