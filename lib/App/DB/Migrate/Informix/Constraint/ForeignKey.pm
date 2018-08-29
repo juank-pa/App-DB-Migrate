@@ -1,9 +1,9 @@
-package Migrate::Informix::Constraint::ForeignKey;
+package App::DB::Migrate::Informix::Constraint::ForeignKey;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Constraint::ForeignKey);
+use parent qw(App::DB::Migrate::Constraint::ForeignKey);
 
 sub valid_rules { { cascade => 'CASCADE' } }
 sub on_update { undef }

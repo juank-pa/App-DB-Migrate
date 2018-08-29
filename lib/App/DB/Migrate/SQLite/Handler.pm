@@ -1,17 +1,17 @@
-package Migrate::SQLite::Handler;
+package App::DB::Migrate::SQLite::Handler;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Handler);
+use parent qw(App::DB::Migrate::Handler);
 
-use Migrate::SQLite::Editor;
-use Migrate::SQLite::Editor::Table;
+use App::DB::Migrate::SQLite::Editor;
+use App::DB::Migrate::SQLite::Editor::Table;
 
 sub editor_for {
     my ($self, $table_name) = @_;
     $self->flush() if $self->editor && $self->editor->name ne $table_name;
-    $self->{editor} = Migrate::SQLite::Editor::edit_table($table_name) unless defined($self->editor);
+    $self->{editor} = App::DB::Migrate::SQLite::Editor::edit_table($table_name) unless defined($self->editor);
     return $self->editor;
 }
 
@@ -35,13 +35,13 @@ sub remove_index { my $self = shift; $self->flush()->SUPER::remove_index(@_) }
 sub rename_index {
     my ($self, undef, $old_name, $new_name) = @_;
     $self->flush();
-    $self->execute(Migrate::SQLite::Editor::rename_index($old_name, $new_name));
+    $self->execute(App::DB::Migrate::SQLite::Editor::rename_index($old_name, $new_name));
 }
 
 sub rename_table {
     my ($self, $old_name, $new_name) = @_;
     $self->flush();
-    $self->execute(Migrate::SQLite::Editor::Table->rename_sql($old_name, $new_name));
+    $self->execute(App::DB::Migrate::SQLite::Editor::Table->rename_sql($old_name, $new_name));
 }
 
 sub add_raw_column {

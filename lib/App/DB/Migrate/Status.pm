@@ -1,24 +1,24 @@
-package Migrate::Status;
+package App::DB::Migrate::Status;
 
 use strict;
 use warnings;
 
 use feature 'say';
-use Migrate::Dbh qw(get_dbh);
-use Migrate::Setup;
-use Migrate::Config;
-use Migrate::Factory qw(class);
+use App::DB::Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::Setup;
+use App::DB::Migrate::Config;
+use App::DB::Migrate::Factory qw(class);
 
 sub print_migration ($_);
 
 sub execute {
     my $options = shift;
-    Migrate::Setup::setup_migrations_table();
+    App::DB::Migrate::Setup::setup_migrations_table();
     print_migrations(exists $options->{file});
 }
 
 sub query_migrations {
-    my $schema = Migrate::Config::config->{schema} // '';
+    my $schema = App::DB::Migrate::Config::config->{schema} // '';
     my $query = class('migrations')->select_migrations_sql;
     my $dbh = get_dbh();
     return @{$dbh->selectall_arrayref($query)};

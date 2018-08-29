@@ -1,11 +1,11 @@
-package Migrate::Generate;
+package App::DB::Migrate::Generate;
 
 use strict;
 use warnings;
 
 use feature 'say';
 
-use Migrate::Config;
+use App::DB::Migrate::Config;
 use File::Spec;
 use Data::Dumper;
 
@@ -123,7 +123,7 @@ sub _generate_file {
     my %replace = _get_replacements($package_name, $table, $data);
 
     my $target_path = "db/migrations/$package_name.pl";
-    my $source_path = Migrate::Config::library_root."/templates/$action.tl";
+    my $source_path = App::DB::Migrate::Config::library_root."/templates/$action.tl";
 
     open(my $src, '<', $source_path) // die("Could not read template: $source_path\n");
     open(my $tgt, '>', $target_path) // die("Could not create migration: $target_path\n");
@@ -159,7 +159,7 @@ sub _parse_column_opts {
 
     my $column_name = shift(@column_data) // die('Column name is required');
     my $options = { name => $column_name };
-    my $datatypes = join('|', keys(%{ Migrate::Factory::class('datatype')->datatypes }));
+    my $datatypes = join('|', keys(%{ App::DB::Migrate::Factory::class('datatype')->datatypes }));
 
     foreach (@column_data) {
         if ($_ eq 'not_null') { $options->{null} = 0 }
@@ -221,7 +221,7 @@ sub _get_column_attributes {
     my $is_ref = shift;
     my $column = delete $options->{name} // die('Column name is required');
     my $datatype = delete $options->{type} // 'string';
-    $options->{foreign_key} = 1 if $is_ref && Migrate::Config::config->{foreign_keys};
+    $options->{foreign_key} = 1 if $is_ref && App::DB::Migrate::Config::config->{foreign_keys};
     return ($column, $datatype, _serialize_column_options($options));
 }
 

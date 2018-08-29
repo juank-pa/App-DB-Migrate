@@ -1,10 +1,10 @@
-package Migrate::Informix::Migrations;
+package App::DB::Migrate::Informix::Migrations;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Migrations);
-use Migrate::Config;
+use parent qw(App::DB::Migrate::Migrations);
+use App::DB::Migrate::Config;
 
 sub create_migrations_table_sql { 'CREATE TABLE IF NOT EXISTS '.shift->migrations_table_name.' (id VARCHAR(128) NOT NULL PRIMARY KEY)' }
 sub select_migrations_sql { 'SELECT * FROM '.shift->migrations_table_name.' ORDER BY id' };

@@ -1,24 +1,24 @@
-package Migrate::Run;
+package App::DB::Migrate::Run;
 
 use strict;
 use warnings;
 use feature 'say';
 
-use Migrate::Dbh qw(get_dbh);
-use Migrate::Factory qw(handler_manager class);
+use App::DB::Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::Factory qw(handler_manager class);
 use Data::Dumper;
 use List::Util qw(min);
 
 sub run {
     my $options = shift;
-    Migrate::Setup::setup_migrations_table();
+    App::DB::Migrate::Setup::setup_migrations_table();
     _run_migrations('down', -1, $options->{dry})
 }
 
 sub rollback {
     my $options = shift;
     my $steps = $options->{steps} || 1;
-    Migrate::Setup::setup_migrations_table();
+    App::DB::Migrate::Setup::setup_migrations_table();
     _run_migrations('up', $steps, $options->{dry})
 }
 
@@ -36,7 +36,7 @@ sub _filtered_migrations {
     my $filter = shift;
     my $steps = shift // 1;
 
-    my @migrations = (grep { $_->{status} eq $filter } Migrate::Status::get_migrations());
+    my @migrations = (grep { $_->{status} eq $filter } App::DB::Migrate::Status::get_migrations());
     $steps = scalar(@migrations) if $steps < 0;
     @migrations = reverse @migrations if $filter eq 'up';
 

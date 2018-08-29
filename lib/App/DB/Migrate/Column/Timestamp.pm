@@ -1,11 +1,11 @@
-package Migrate::Column::Timestamp;
+package App::DB::Migrate::Column::Timestamp;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Factory qw(column);
+use App::DB::Migrate::Factory qw(column);
 
 sub new {
     my ($class, $name, $options) = @_;

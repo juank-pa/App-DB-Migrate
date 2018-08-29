@@ -1,12 +1,12 @@
-package Migrate::Informix::Table;
+package App::DB::Migrate::Informix::Table;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Table);
+use parent qw(App::DB::Migrate::Table);
 
 sub temporary { 'TEMP' }
-sub dbspace { Migrate::Config::config->{dbspace}? 'IN '.Migrate::Config::config->{dbspace} : undef }
+sub dbspace { App::DB::Migrate::Config::config->{dbspace}? 'IN '.App::DB::Migrate::Config::config->{dbspace} : undef }
 
 sub _add_options {
     my $self = shift;

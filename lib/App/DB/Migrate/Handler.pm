@@ -1,12 +1,12 @@
-package Migrate::Handler;
+package App::DB::Migrate::Handler;
 
 use strict;
 use warnings;
 
-use Migrate::Config;
-use Migrate::Util;
-use Migrate::Factory qw(column timestamp foreign_key table_index table id reference);
-use Migrate::Dbh qw{get_dbh};
+use App::DB::Migrate::Config;
+use App::DB::Migrate::Util;
+use App::DB::Migrate::Factory qw(column timestamp foreign_key table_index table id reference);
+use App::DB::Migrate::Dbh qw{get_dbh};
 use Lingua::EN::Inflexion qw(noun);
 use DBI;
 

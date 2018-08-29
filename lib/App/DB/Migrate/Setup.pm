@@ -1,22 +1,22 @@
-package Migrate::Setup;
+package App::DB::Migrate::Setup;
 
 use strict;
 use warnings;
 use feature 'say';
 
-use Migrate::Config;
-use Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::Config;
+use App::DB::Migrate::Dbh qw(get_dbh);
 
 use File::Path qw(make_path);
 use File::Copy qw(copy);
 
-use Migrate::Factory qw(class);
+use App::DB::Migrate::Factory qw(class);
 
 my $db_path = 'db';
 my $migrations_path = "$db_path/migrations";
 my $config_file_name = 'config.pl';
 
-my $source_templates_path = Migrate::Config::library_root.'/script';
+my $source_templates_path = App::DB::Migrate::Config::library_root.'/script';
 my $source_config_path = "$source_templates_path/$config_file_name";
 my $target_config_path = "$db_path/$config_file_name";
 my $target_config_sample_path = "$target_config_path.example";

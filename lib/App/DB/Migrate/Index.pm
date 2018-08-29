@@ -1,9 +1,9 @@
-package Migrate::Index;
+package App::DB::Migrate::Index;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Util;
-use Migrate::Factory qw(id);
+use App::DB::Migrate::Util;
+use App::DB::Migrate::Factory qw(id);
 
 sub new {
     my ($class, $table, $columns, $options) = @_;
@@ -70,9 +70,9 @@ sub to_sql {
 
 sub _add_options {
     my $self = shift;
-    return (@_, Migrate::Config::config->{add_options}? $self->options : undef);
+    return (@_, App::DB::Migrate::Config::config->{add_options}? $self->options : undef);
 }
 
-sub _join_elems { shift; Migrate::Util::join_elems(@_) }
+sub _join_elems { shift; App::DB::Migrate::Util::join_elems(@_) }
 
 return 1;

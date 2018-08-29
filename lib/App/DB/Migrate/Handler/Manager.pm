@@ -1,10 +1,10 @@
-package Migrate::Handler::Manager;
+package App::DB::Migrate::Handler::Manager;
 
 use strict;
 use warnings;
 
-use Migrate::Dbh qw(get_dbh);
-use Migrate::Factory qw(class handler);
+use App::DB::Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::Factory qw(class handler);
 
 sub new {
     my ($class, $dry, $output, $dbh) = @_;

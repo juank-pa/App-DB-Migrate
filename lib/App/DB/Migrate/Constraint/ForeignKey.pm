@@ -1,15 +1,15 @@
-package Migrate::Constraint::ForeignKey;
+package App::DB::Migrate::Constraint::ForeignKey;
 
 use strict;
 use warnings;
 
 use Lingua::EN::Inflexion qw(noun);
 
-use Migrate::Util;
-use Migrate::Config;
-use Migrate::Factory qw(id);
+use App::DB::Migrate::Util;
+use App::DB::Migrate::Config;
+use App::DB::Migrate::Factory qw(id);
 
-use parent qw(Migrate::Constraint);
+use parent qw(App::DB::Migrate::Constraint);
 
 sub new {
     my ($class, $from_table, $to_table, $options) = @_;
@@ -24,7 +24,7 @@ sub from_table { $_[0]->{from_table} }
 sub to_table { $_[0]->{to_table} }
 
 sub column { $_[0]->{options}->{column} || $_[0]->_get_column_name }
-sub primary_key { $_[0]->{options}->{primary_key} || Migrate::Config::id($_[0]->to_table) }
+sub primary_key { $_[0]->{options}->{primary_key} || App::DB::Migrate::Config::id($_[0]->to_table) }
 
 sub build_name { 'fk_'.$_[0]->from_table.'_'.$_[0]->column }
 

@@ -1,21 +1,21 @@
-package Migrate::SQLite::Editor::Column;
+package App::DB::Migrate::SQLite::Editor::Column;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::SQLite::Editor::Util qw(trim);
-use Migrate::SQLite::Editor::Parser qw(parse_constraint);
-use Migrate::SQLite::Editor::Datatype;
-use Migrate::Factory qw(datatype default id);
-use Migrate::Util;
+use App::DB::Migrate::SQLite::Editor::Util qw(trim);
+use App::DB::Migrate::SQLite::Editor::Parser qw(parse_constraint);
+use App::DB::Migrate::SQLite::Editor::Datatype;
+use App::DB::Migrate::Factory qw(datatype default id);
+use App::DB::Migrate::Util;
 
 sub new {
     my ($class, $name, $datatype, @constraints) = @_;
     my $data = {
         name => $name || die('Column name needed'),
-        datatype => $datatype || Migrate::SQLite::Editor::Datatype->new,
+        datatype => $datatype || App::DB::Migrate::SQLite::Editor::Datatype->new,
         constraints => [@constraints]
     };
     return bless $data, $class;
@@ -113,7 +113,7 @@ sub _is_constraint_named {
 sub to_sql {
     my $self = shift;
     my @elems = (id($self->name), $self->type, @{ $self->constraints });
-    return Migrate::Util::join_elems(@elems);
+    return App::DB::Migrate::Util::join_elems(@elems);
 }
 
 return 1;

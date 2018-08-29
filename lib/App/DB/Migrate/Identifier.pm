@@ -1,11 +1,11 @@
-package Migrate::Identifier;
+package App::DB::Migrate::Identifier;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Util;
+use App::DB::Migrate::Util;
 
 sub new {
     my $class = shift;
@@ -20,8 +20,8 @@ sub is_qualified { $_[0]->{qualified} }
 sub to_sql {
     my $self = shift;
     return $self->is_qualified
-        ? Migrate::Util::qualified_name($self->name)
-        : Migrate::Util::identifier_name($self->name);
+        ? App::DB::Migrate::Util::qualified_name($self->name)
+        : App::DB::Migrate::Util::identifier_name($self->name);
 }
 
 return 1;

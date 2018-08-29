@@ -1,11 +1,11 @@
-package Migrate::Informix::Datatype;
+package App::DB::Migrate::Informix::Datatype;
 
 use strict;
 use warnings;
 
-use Migrate::Handler;
+use App::DB::Migrate::Handler;
 
-use parent qw(Migrate::Datatype);
+use parent qw(App::DB::Migrate::Datatype);
 
 sub datatypes {
     {

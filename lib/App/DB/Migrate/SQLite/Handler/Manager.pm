@@ -1,9 +1,9 @@
-package Migrate::SQLite::Handler::Manager;
+package App::DB::Migrate::SQLite::Handler::Manager;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Handler::Manager);
+use parent qw(App::DB::Migrate::Handler::Manager);
 
 sub startup {
     my $self = shift;

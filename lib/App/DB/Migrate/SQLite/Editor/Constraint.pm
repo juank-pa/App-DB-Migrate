@@ -1,12 +1,12 @@
-package Migrate::SQLite::Editor::Constraint;
+package App::DB::Migrate::SQLite::Editor::Constraint;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Factory qw(id);
-use Migrate::SQLite::Editor::Util qw(unquote);
+use App::DB::Migrate::Factory qw(id);
+use App::DB::Migrate::SQLite::Editor::Util qw(unquote);
 
 sub new {
     my ($class, $name, $type, @pred) = @_;

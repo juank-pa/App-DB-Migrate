@@ -1,9 +1,9 @@
-package Migrate::SQLite::Identifier;
+package App::DB::Migrate::SQLite::Identifier;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Identifier);
+use parent qw(App::DB::Migrate::Identifier);
 
 sub new {
     my ($class, $name) = @_;

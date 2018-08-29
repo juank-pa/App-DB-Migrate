@@ -1,10 +1,10 @@
-package Migrate::SQLite::Editor::Datatype;
+package App::DB::Migrate::SQLite::Editor::Datatype;
 
 use strict;
 use warnings;
 
-use Migrate::SQLizable;
-use parent qw(Migrate::SQLizable);
+use App::DB::Migrate::SQLizable;
+use parent qw(App::DB::Migrate::SQLizable);
 
 our %datatypes = (
     INT                 => 'integer',

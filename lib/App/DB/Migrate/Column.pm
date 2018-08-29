@@ -1,12 +1,12 @@
-package Migrate::Column;
+package App::DB::Migrate::Column;
 
 use strict;
 use warnings;
 
-use Migrate::Factory qw(null default datatype id);
-use Migrate::Util;
+use App::DB::Migrate::Factory qw(null default datatype id);
+use App::DB::Migrate::Util;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
 sub new {
     my ($class, $name, $datatype, $options) = @_;
@@ -38,7 +38,7 @@ sub add_constraint {
     push(@{$self->{constraints}}, $constraint);
 }
 
-sub _extract_datatype_options { Migrate::Util::extract_keys($_[1], ['limit', 'precision', 'scale']) }
+sub _extract_datatype_options { App::DB::Migrate::Util::extract_keys($_[1], ['limit', 'precision', 'scale']) }
 
 sub to_sql {
     my $self = shift;
@@ -49,6 +49,6 @@ sub to_sql {
     );
 }
 
-sub _join_elems { shift; Migrate::Util::join_elems(@_) }
+sub _join_elems { shift; App::DB::Migrate::Util::join_elems(@_) }
 
 return 1;

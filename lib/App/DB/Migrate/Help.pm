@@ -1,10 +1,10 @@
-package Migrate::Help;
+package App::DB::Migrate::Help;
 
 use strict;
 use warnings;
 use feature 'say';
 
-use Migrate::Config;
+use App::DB::Migrate::Config;
 use Pod::Usage;
 use Pod::Find qw(pod_where pod_find);
 

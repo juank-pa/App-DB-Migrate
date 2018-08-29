@@ -1,9 +1,9 @@
-package Migrate::SQLite::Table;
+package App::DB::Migrate::SQLite::Table;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Table);
+use parent qw(App::DB::Migrate::Table);
 
 sub temporary { 'TEMPORARY' }
 

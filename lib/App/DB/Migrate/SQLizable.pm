@@ -1,4 +1,4 @@
-package Migrate::SQLizable;
+package App::DB::Migrate::SQLizable;
 
 use strict;
 use warnings;

@@ -1,9 +1,9 @@
-package Migrate::SQLite::Index;
+package App::DB::Migrate::SQLite::Index;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Index);
+use parent qw(App::DB::Migrate::Index);
 
 sub rename { $_[0]->{options}->{name} = $_[1] }
 

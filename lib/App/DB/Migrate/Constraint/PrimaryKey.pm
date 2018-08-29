@@ -1,9 +1,9 @@
-package Migrate::Constraint::PrimaryKey;
+package App::DB::Migrate::Constraint::PrimaryKey;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Constraint);
+use parent qw(App::DB::Migrate::Constraint);
 
 sub new {
     my ($class, $table, $column, $options) = @_;

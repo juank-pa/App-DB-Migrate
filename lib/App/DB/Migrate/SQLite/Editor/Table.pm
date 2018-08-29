@@ -1,12 +1,12 @@
-package Migrate::SQLite::Editor::Table;
+package App::DB::Migrate::SQLite::Editor::Table;
 
 use strict;
 use warnings;
 
 use Lingua::EN::Inflexion qw(noun verb);
 
-use Migrate::SQLite::Editor::Parser qw(parse_column);
-use Migrate::Factory qw(id column);
+use App::DB::Migrate::SQLite::Editor::Parser qw(parse_column);
+use App::DB::Migrate::Factory qw(id column);
 
 sub new {
     my ($class, $name, $postfix, @columns) = @_;

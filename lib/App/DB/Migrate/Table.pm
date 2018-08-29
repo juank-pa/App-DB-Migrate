@@ -1,13 +1,13 @@
-package Migrate::Table;
+package App::DB::Migrate::Table;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
 use Scalar::Util qw(looks_like_number);
-use Migrate::Factory qw(class id id_column reference timestamp);
-use Migrate::Util;
+use App::DB::Migrate::Factory qw(class id id_column reference timestamp);
+use App::DB::Migrate::Util;
 
 sub new {
     my ($class, $name, $options) = @_;
@@ -59,7 +59,7 @@ sub AUTOLOAD {
     goto &$meth_ref;
 }
 
-sub column { shift->_push_column(Migrate::Factory::column(@_)) }
+sub column { shift->_push_column(App::DB::Migrate::Factory::column(@_)) }
 sub _push_primary_key { my $self = shift; $self->_push_column(id_column($self->name, @_)) }
 
 sub timestamps {
@@ -91,10 +91,10 @@ sub _add_options_as { shift->_add_options(@_) }
 
 sub _add_options {
     my $self = shift;
-    return (@_, Migrate::Config::config->{add_options}? $self->options : undef);
+    return (@_, App::DB::Migrate::Config::config->{add_options}? $self->options : undef);
 }
 
-sub _join_elems { shift; Migrate::Util::join_elems(@_) }
+sub _join_elems { shift; App::DB::Migrate::Util::join_elems(@_) }
 
 sub _push_column { push(@{$_[0]->{columns}}, $_[1]) }
 

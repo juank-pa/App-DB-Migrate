@@ -1,11 +1,11 @@
-package Migrate::SQLite::Editor;
+package App::DB::Migrate::SQLite::Editor;
 
 use strict;
 use warnings;
 
-use Migrate::SQLite::Editor::Parser qw(parse_table parse_index);
-use Migrate::Factory qw(id);
-use Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::SQLite::Editor::Parser qw(parse_table parse_index);
+use App::DB::Migrate::Factory qw(id);
+use App::DB::Migrate::Dbh qw(get_dbh);
 
 sub edit_table {
     my $table_name = shift;

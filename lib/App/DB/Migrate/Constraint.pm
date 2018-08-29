@@ -1,12 +1,12 @@
-package Migrate::Constraint;
+package App::DB::Migrate::Constraint;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Util;
-use Migrate::Factory qw(id);
+use App::DB::Migrate::Util;
+use App::DB::Migrate::Factory qw(id);
 
 sub new {
     my ($class, $options) = @_;
@@ -27,6 +27,6 @@ sub constraint_sql {
     $self->_join_elems($self->constraint, $self->identifier);
 }
 
-sub _join_elems { shift; Migrate::Util::join_elems(@_) }
+sub _join_elems { shift; App::DB::Migrate::Util::join_elems(@_) }
 
 return 1;

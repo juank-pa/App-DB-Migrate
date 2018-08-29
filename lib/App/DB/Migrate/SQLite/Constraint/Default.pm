@@ -1,9 +1,9 @@
-package Migrate::SQLite::Constraint::Default;
+package App::DB::Migrate::SQLite::Constraint::Default;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Constraint::Default);
+use parent qw(App::DB::Migrate::Constraint::Default);
 
 sub current_timestamp { 'CURRENT_TIMESTAMP' }
 

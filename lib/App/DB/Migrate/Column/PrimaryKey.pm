@@ -1,12 +1,12 @@
-package Migrate::Column::PrimaryKey;
+package App::DB::Migrate::Column::PrimaryKey;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
-use Migrate::Factory qw(primary_key column);
-use Migrate::Config;
+use App::DB::Migrate::Factory qw(primary_key column);
+use App::DB::Migrate::Config;
 
 sub new {
     my ($class, $table, $column, $options) = @_;
@@ -15,7 +15,7 @@ sub new {
     $options ||= {};
 
     my $datatype = $options->{type} || $class->default_datatype;
-    $column ||= Migrate::Config::id($table);
+    $column ||= App::DB::Migrate::Config::id($table);
 
     my $col = column($column, $datatype, $options);
     my $pk = $class->_get_pk($table, $column, $datatype, $options);

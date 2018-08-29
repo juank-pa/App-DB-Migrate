@@ -1,13 +1,13 @@
-package Migrate::Column::References;
+package App::DB::Migrate::Column::References;
 
 use strict;
 use warnings;
 
 
-use Migrate::Factory qw(foreign_key column);
-use Migrate::Util;
+use App::DB::Migrate::Factory qw(foreign_key column);
+use App::DB::Migrate::Util;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
 # TODO:
 # * Add support to 'polymorphic' references.
@@ -45,7 +45,7 @@ sub _get_fk {
     return unless $fk_options;
 
     $fk_options = ref($fk_options) eq 'HASH'? $fk_options : {};
-    my $to_table = $fk_options->{to_table} || Migrate::Util::table_from_column($ref_name);
+    my $to_table = $fk_options->{to_table} || App::DB::Migrate::Util::table_from_column($ref_name);
     return foreign_key($table_name, $to_table, $fk_options);
 }
 

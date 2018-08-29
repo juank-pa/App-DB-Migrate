@@ -1,13 +1,13 @@
-package Migrate::Datatype;
+package App::DB::Migrate::Datatype;
 
 use strict;
 use warnings;
 
 use Scalar::Util qw(weaken);
-use Migrate::Dbh qw{get_dbh};
+use App::DB::Migrate::Dbh qw{get_dbh};
 use Scalar::Util qw{looks_like_number};
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
 sub new {
     my ($class, $name, $options) = @_;

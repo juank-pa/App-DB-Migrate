@@ -1,4 +1,4 @@
-package Migrate::SQLite::Editor::Parser;
+package App::DB::Migrate::SQLite::Editor::Parser;
 
 use strict;
 use warnings;
@@ -18,14 +18,14 @@ BEGIN {
     Exporter::export_tags('all');
 }
 
-use Migrate::SQLite::Editor::Util qw(unquote trim);
-use Migrate::SQLite::Editor::Datatype;
-use Migrate::SQLite::Editor::Constraint;
-use Migrate::SQLite::Editor::Column;
-use Migrate::SQLite::Editor::Table;
-use Migrate::SQLite::Index;
+use App::DB::Migrate::SQLite::Editor::Util qw(unquote trim);
+use App::DB::Migrate::SQLite::Editor::Datatype;
+use App::DB::Migrate::SQLite::Editor::Constraint;
+use App::DB::Migrate::SQLite::Editor::Column;
+use App::DB::Migrate::SQLite::Editor::Table;
+use App::DB::Migrate::SQLite::Index;
 
-my $datatypes_str = join('|', keys %Migrate::SQLite::Editor::Datatype::datatypes);
+my $datatypes_str = join('|', keys %App::DB::Migrate::SQLite::Editor::Datatype::datatypes);
 my $attributes_re = qr/\((?<opts>[^)]+)\)/;
 
 my $squoted_re = qr/'(?:[^']++|'')*+'/;
@@ -49,7 +49,7 @@ sub parse_table {
     $sql =~ s/\)\s*([^\)]*)$//;
     my $postfix = $1;
     my @columns = map { parse_column($_) } split_columns($sql);
-    return Migrate::SQLite::Editor::Table->new($name, $postfix, @columns);
+    return App::DB::Migrate::SQLite::Editor::Table->new($name, $postfix, @columns);
 }
 
 sub parse_column { parse_column_tokens([ get_tokens(shift) ]) }
@@ -63,7 +63,7 @@ sub parse_index {
     my $table = unquote($+{table});
     my $options = { unique => !!$+{unique}, name => $name, options => trim($+{options})  };
     my $columns = [ map { unquote(trim($_)) } split(',', $cols) ];
-    return Migrate::SQLite::Index->new($table, $columns, $options);
+    return App::DB::Migrate::SQLite::Index->new($table, $columns, $options);
 }
 
 sub parse_constraint { parse_constraint_tokens([ get_tokens(shift) ]) }
@@ -78,7 +78,7 @@ sub parse_column_tokens {
     my $name = unquote(shift(@$tokens));
     my $datatype = _parse_datatype($tokens);
     my @constraints = _parse_constraints($tokens);
-    return Migrate::SQLite::Editor::Column->new($name, $datatype, @constraints);
+    return App::DB::Migrate::SQLite::Editor::Column->new($name, $datatype, @constraints);
 }
 
 sub parse_constraint_tokens {
@@ -87,7 +87,7 @@ sub parse_constraint_tokens {
     return shift(@$tokens) unless $type;
 
     my @pred = _parse_constraint_predicate($type, $tokens);
-    return Migrate::SQLite::Editor::Constraint->new($name, $type, @pred);
+    return App::DB::Migrate::SQLite::Editor::Constraint->new($name, $type, @pred);
 }
 
 sub _parse_datatype {
@@ -102,7 +102,7 @@ sub _parse_datatype {
     return if $name !~ /^(?:$datatypes_str)$/io;
     splice(@$tokens, 0, scalar(@datatype));
 
-    return Migrate::SQLite::Editor::Datatype->new($name, _parse_datatype_attributes($tokens));
+    return App::DB::Migrate::SQLite::Editor::Datatype->new($name, _parse_datatype_attributes($tokens));
 }
 
 sub _parse_datatype_attributes {

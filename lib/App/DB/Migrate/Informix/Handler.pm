@@ -1,11 +1,11 @@
-package Migrate::Informix::Handler;
+package App::DB::Migrate::Informix::Handler;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Handler);
+use parent qw(App::DB::Migrate::Handler);
 
-use Migrate::Factory qw(column reference id);
+use App::DB::Migrate::Factory qw(column reference id);
 
 # Foreign keys are automatically indexed in Informix so there is no need to index them again.
 sub _add_indexes {

@@ -1,7 +1,7 @@
-package Migrate::Util;
+package App::DB::Migrate::Util;
 
-use Migrate::Config;
-use Migrate::Dbh qw{get_dbh};
+use App::DB::Migrate::Config;
+use App::DB::Migrate::Dbh qw{get_dbh};
 use Lingua::EN::Inflexion qw(noun verb);
 
 sub extract_keys {
@@ -18,14 +18,14 @@ sub extract_keys {
 sub qualified_name {
     my $table_name = shift;
     return unless $table_name;
-    my $config = Migrate::Config::config;
+    my $config = App::DB::Migrate::Config::config;
     return get_dbh()->quote_identifier($config->{catalog}, $config->{schema}, $table_name);
 }
 
 sub identifier_name {
     my $id_name = shift;
     return unless $id_name;
-    my $config = Migrate::Config::config;
+    my $config = App::DB::Migrate::Config::config;
     return get_dbh()->quote_identifier($id_name);
 }
 

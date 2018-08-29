@@ -1,9 +1,9 @@
-package Migrate::SQLite::Datatype;
+package App::DB::Migrate::SQLite::Datatype;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Datatype);
+use parent qw(App::DB::Migrate::Datatype);
 
 sub datatypes {
     {

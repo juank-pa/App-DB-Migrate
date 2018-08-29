@@ -1,13 +1,13 @@
-package Migrate::Informix::Index;
+package App::DB::Migrate::Informix::Index;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Index);
+use parent qw(App::DB::Migrate::Index);
 
-use Migrate::Util;
+use App::DB::Migrate::Util;
 
-sub dbspace { Migrate::Config::config->{dbspace}? 'IN '.Migrate::Config::config->{dbspace} : undef }
+sub dbspace { App::DB::Migrate::Config::config->{dbspace}? 'IN '.App::DB::Migrate::Config::config->{dbspace} : undef }
 sub using { 'USING' }
 
 sub _add_options {

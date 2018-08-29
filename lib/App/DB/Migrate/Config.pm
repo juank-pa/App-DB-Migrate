@@ -1,4 +1,4 @@
-package Migrate::Config;
+package App::DB::Migrate::Config;
 
 our $library_root;
 

@@ -1,9 +1,9 @@
-package Migrate::Constraint::Default;
+package App::DB::Migrate::Constraint::Default;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::Constraint);
+use parent qw(App::DB::Migrate::Constraint);
 
 # TODO:
 # * Add support to convert a numeric value coming from time()

@@ -1,9 +1,9 @@
-package Migrate::Constraint::Null;
+package App::DB::Migrate::Constraint::Null;
 
 use strict;
 use warnings;
 
-use parent qw(Migrate::SQLizable);
+use parent qw(App::DB::Migrate::SQLizable);
 
 sub new {
     my ($class, $null) = @_;

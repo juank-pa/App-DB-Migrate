@@ -1,4 +1,4 @@
-package Migrate::Factory;
+package App::DB::Migrate::Factory;
 
 use strict;
 use warnings;
@@ -10,9 +10,9 @@ BEGIN {
 }
 
 use Module::Load;
-use Migrate::Config;
+use App::DB::Migrate::Config;
 
-sub class_name { 'Migrate::'.Migrate::Config::driver()."::\u$_[0]" }
+sub class_name { 'App::DB::Migrate::'.App::DB::Migrate::Config::driver()."::\u$_[0]" }
 
 sub class {
     my $class = shift;
@@ -25,9 +25,9 @@ sub class {
 
     return $qualified_class unless $@;
 
-    eval{ load "Migrate::\u$class" };
+    eval{ load "App::DB::Migrate::\u$class" };
     die $@ if $@;
-    return "Migrate::\u$class";
+    return "App::DB::Migrate::\u$class";
 }
 
 sub create { class(shift)->new(@_) }

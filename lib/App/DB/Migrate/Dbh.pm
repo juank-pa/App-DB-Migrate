@@ -1,4 +1,4 @@
-package Migrate::Dbh;
+package App::DB::Migrate::Dbh;
 
 use strict;
 use warnings;
@@ -12,13 +12,13 @@ BEGIN {
 }
 
 use DBI;
-use Migrate::Config;
+use App::DB::Migrate::Config;
 
 our $_DBH;
 our $DefaultOptions = { PrintError => 0, RaiseError => 0, AutoCommit => 1, ChopBlanks => 1 };
 
 sub dbh_attr {
-    my $attr  = Migrate::Config::config->{attr} // {};
+    my $attr  = App::DB::Migrate::Config::config->{attr} // {};
     return { %$DefaultOptions, %$attr };
 }
 
@@ -27,7 +27,7 @@ sub get_dbh
     return $_DBH if ref $_DBH;
 
     my $dbh = undef;
-    my $config = Migrate::Config::config;
+    my $config = App::DB::Migrate::Config::config;
     my $attr  = dbh_attr;
 
     eval {

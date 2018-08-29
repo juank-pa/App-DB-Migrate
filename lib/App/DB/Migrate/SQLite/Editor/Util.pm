@@ -1,4 +1,4 @@
-package Migrate::SQLite::Editor::Util;
+package App::DB::Migrate::SQLite::Editor::Util;
 
 use strict;
 use warnings;
