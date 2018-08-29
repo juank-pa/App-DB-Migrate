@@ -1,4 +1,4 @@
-db
+.DS_Store
 Makefile
 Makefile.old
 blib

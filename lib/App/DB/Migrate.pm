@@ -8,10 +8,10 @@ our $VERSION = '0.001';
 
 use Getopt::Long qw{:config posix_default bundling auto_version};
 
-use Migrate::Generate;
-use Migrate::Status;
-use Migrate::Run;
-use Migrate::Setup;
+use App::DB::Migrate::Generate;
+use App::DB::Migrate::Status;
+use App::DB::Migrate::Run;
+use App::DB::Migrate::Setup;
 
 use constant ACTION_OPTIONS => {
     generate => ['name|n:s', 'column|c:s@', 'ref|r:s@', 'tstamps|t'],
@@ -22,11 +22,11 @@ use constant ACTION_OPTIONS => {
 };
 
 use constant ACTION_CODE => {
-    generate => \&Migrate::Generate::execute,
-    status => \&Migrate::Status::execute,
-    run => \&Migrate::Run::run,
-    rollback => \&Migrate::Run::rollback,
-    setup => \&Migrate::Setup::execute,
+    generate => \&App::DB::Migrate::Generate::execute,
+    status => \&App::DB::Migrate::Status::execute,
+    run => \&App::DB::Migrate::Run::run,
+    rollback => \&App::DB::Migrate::Run::rollback,
+    setup => \&App::DB::Migrate::Setup::execute,
 };
 
 sub execute {
@@ -75,7 +75,7 @@ sub show_action_help { my ($opt, $act) = @_; $act && is_help_option $opt }
 sub check_help {
     my (undef, $action) = @_;
     if (show_general_help(@_) || show_action_help(@_)) {
-        Migrate::Help::execute($action);
+        App::DB::Migrate::Help::execute($action);
         exit 0;
     }
 }
@@ -90,7 +90,7 @@ sub check_valid_action {
 
 sub check_needs_setup {
     my $action = shift;
-    if ($action ne 'setup' && !Migrate::Setup::is_migration_setup) {
+    if ($action ne 'setup' && !App::DB::Migrate::Setup::is_migration_setup) {
         say('Migrations are not yet setup. Run: migrate setup');
         exit(0);
     }
