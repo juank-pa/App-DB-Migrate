@@ -1,10 +1,10 @@
-#!/usr/bin/perl -w
+#!perl -w
 
 use strict;
 
 my $script_dir;
 BEGIN { ($script_dir = $0) =~ s/[\/\\:]?migrate$//; }
-use lib ("$script_dir/lib");
+use lib ("$script_dir/../lib");
 
 use feature 'say';
 
