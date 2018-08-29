@@ -8,30 +8,30 @@ use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
 
-use Migrate::SQLite::Editor::Util;
+use App::DB::Migrate::SQLite::Editor::Util;
 
 subtest 'trim removes surrounding white space' => sub {
-    is(Migrate::SQLite::Editor::Util::trim("\t\n  test \n "), 'test');
+    is(App::DB::Migrate::SQLite::Editor::Util::trim("\t\n  test \n "), 'test');
 };
 
 subtest 'trim supports undefined values' => sub {
-    is(Migrate::SQLite::Editor::Util::trim(undef), undef);
+    is(App::DB::Migrate::SQLite::Editor::Util::trim(undef), undef);
 };
 
 subtest 'trim supports undefined values' => sub {
-    is(Migrate::SQLite::Editor::Util::trim(undef), undef);
+    is(App::DB::Migrate::SQLite::Editor::Util::trim(undef), undef);
 };
 
 subtest 'unquotes removes double quotes' => sub {
-    is(Migrate::SQLite::Editor::Util::unquote('"quoted"'), 'quoted');
+    is(App::DB::Migrate::SQLite::Editor::Util::unquote('"quoted"'), 'quoted');
 };
 
 subtest 'unquotes unescapes internal quotes' => sub {
-    is(Migrate::SQLite::Editor::Util::unquote('"quo""ted"'), 'quo"ted');
+    is(App::DB::Migrate::SQLite::Editor::Util::unquote('"quo""ted"'), 'quo"ted');
 };
 
 subtest 'unquotes supports undef values' => sub {
-    is(Migrate::SQLite::Editor::Util::unquote(undef), undef);
+    is(App::DB::Migrate::SQLite::Editor::Util::unquote(undef), undef);
 };
 
 done_testing();

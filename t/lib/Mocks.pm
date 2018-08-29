@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 
 use MockStringifiedObject;
-use Migrate::Factory;
+use App::DB::Migrate::Factory;
 
 BEGIN {
     use parent 'Exporter';
@@ -46,8 +46,8 @@ my $mocks = {
 };
 
 no warnings 'redefine';
-*Migrate::Factory::class = sub { $mocks->{$_[0]} };
-*Migrate::Factory::create = sub {
+*App::DB::Migrate::Factory::class = sub { $mocks->{$_[0]} };
+*App::DB::Migrate::Factory::create = sub {
     if ($test_die) {
         $test_die = 0;
         die("Test issue\n");

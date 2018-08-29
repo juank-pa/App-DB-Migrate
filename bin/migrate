@@ -8,8 +8,8 @@ use lib ("$script_dir/../lib");
 
 use feature 'say';
 
-use Migrate;
-use Migrate::Help;
+use App::DB::Migrate;
+use App::DB::Migrate::Help;
 
 our $VERSION = '0.001';
 

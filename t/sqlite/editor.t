@@ -7,11 +7,11 @@ use Test::More;
 use Test::MockModule;
 use Test::Trap;
 use MockStringifiedObject;
-use Migrate::Dbh qw(get_dbh);
+use App::DB::Migrate::Dbh qw(get_dbh);
 
-use Migrate::SQLite::Editor;
+use App::DB::Migrate::SQLite::Editor;
 
-my $constraint = new Test::MockModule('Migrate::Config');
+my $constraint = new Test::MockModule('App::DB::Migrate::Config');
 $constraint->redefine('config', { dsn => 'dbi:SQLite:sample' });
 
 sub get_table {
@@ -29,18 +29,18 @@ get_dbh->do('CREATE TABLE IF NOT EXISTS test2(id)') // die('Could not create tes
 get_dbh->do('CREATE INDEX IF NOT EXISTS test_index ON test2(id)') // die('Could not create test2 index');
 
 subtest 'imports parse_table and parse_index from Parser' => sub {
-    use Migrate::SQLite::Editor::Parser;
-    is(\&Migrate::SQLite::Editor::Parser::parse_table, \&Migrate::SQLite::Editor::parse_table);
-    is(\&Migrate::SQLite::Editor::Parser::parse_index, \&Migrate::SQLite::Editor::parse_index);
+    use App::DB::Migrate::SQLite::Editor::Parser;
+    is(\&App::DB::Migrate::SQLite::Editor::Parser::parse_table, \&App::DB::Migrate::SQLite::Editor::parse_table);
+    is(\&App::DB::Migrate::SQLite::Editor::Parser::parse_index, \&App::DB::Migrate::SQLite::Editor::parse_index);
 };
 
 subtest 'edit_table finds and parses a table by name' => sub {
     my $mock_table = Test::MockObject->new->set_false('set_indexes');
     my $parsed_sql;
-    my $editor = Test::MockModule->new('Migrate::SQLite::Editor');
+    my $editor = Test::MockModule->new('App::DB::Migrate::SQLite::Editor');
     $editor->redefine('parse_table', sub { $parsed_sql = shift; $mock_table });
 
-    my $table = Migrate::SQLite::Editor::edit_table('test');
+    my $table = App::DB::Migrate::SQLite::Editor::edit_table('test');
     is($table, $mock_table);
     is($parsed_sql, $table_sql);
 };
@@ -48,10 +48,10 @@ subtest 'edit_table finds and parses a table by name' => sub {
 subtest 'edit_table finds and parses the table indexes' => sub {
     my $mock_index = Test::MockObject->new;
     my $parsed_sql;
-    my $editor = Test::MockModule->new('Migrate::SQLite::Editor');
+    my $editor = Test::MockModule->new('App::DB::Migrate::SQLite::Editor');
     $editor->redefine('parse_index', sub { $parsed_sql = shift; $mock_index });
 
-    my $table = Migrate::SQLite::Editor::edit_table('test');
+    my $table = App::DB::Migrate::SQLite::Editor::edit_table('test');
     is(scalar @{ $table->{indexes} }, 1);
     is($table->{indexes}->[0], $mock_index);
     is($parsed_sql, $index_sql);
@@ -66,7 +66,7 @@ subtest 'edit_table uses given dbh' => sub {
             $first--? [[$table_sql]] : [[$index_sql]]
         });
 
-    my $table = Migrate::SQLite::Editor::edit_table('testx', $dbh);
+    my $table = App::DB::Migrate::SQLite::Editor::edit_table('testx', $dbh);
     is_deeply(\@sql, [
         "SELECT sql FROM sqlite_master WHERE type='table' AND tbl_name=?", undef, 'testx',
         "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=?", undef, 'testx'
@@ -74,24 +74,24 @@ subtest 'edit_table uses given dbh' => sub {
 };
 
 subtest 'edit_table fails if there is no table with that name' => sub {
-    trap { Migrate::SQLite::Editor::edit_table('testx') };
+    trap { App::DB::Migrate::SQLite::Editor::edit_table('testx') };
     like($trap->die, qr/^Could not find table testx/);
 };
 
 subtest 'edit_table fails if dbh fails' => sub {
     my $dbh = Test::MockObject->new
         ->mock('selectall_arrayref', sub { eval { die 'Custom error' }; undef });
-    trap { Migrate::SQLite::Editor::edit_table('testx', $dbh) };
+    trap { App::DB::Migrate::SQLite::Editor::edit_table('testx', $dbh) };
     like($trap->die, qr/^Error querying for table testx\nCustom error/);
 };
 
 subtest 'index_by_name finds and parses a table index by name' => sub {
     my $mock_index = Test::MockObject->new;
     my $parsed_sql;
-    my $editor = Test::MockModule->new('Migrate::SQLite::Editor');
+    my $editor = Test::MockModule->new('App::DB::Migrate::SQLite::Editor');
     $editor->redefine('parse_index', sub { $parsed_sql = shift; $mock_index });
 
-    my $index = Migrate::SQLite::Editor::index_by_name('test_index');
+    my $index = App::DB::Migrate::SQLite::Editor::index_by_name('test_index');
     is($index, $mock_index);
     is($parsed_sql, 'CREATE INDEX test_index ON test2(id)');
 };
@@ -105,26 +105,26 @@ subtest 'index_by_name uses given dbh' => sub {
             [[$index_sql]];
         });
 
-    my $table = Migrate::SQLite::Editor::index_by_name('test_idx', $dbh);
+    my $table = App::DB::Migrate::SQLite::Editor::index_by_name('test_idx', $dbh);
     is_deeply(\@sql, [
         "SELECT sql FROM sqlite_master WHERE type='index' AND name=?", undef, 'test_idx',
     ]);
 };
 
 subtest 'index_by_name fails if there is no index with that name' => sub {
-    trap { Migrate::SQLite::Editor::index_by_name('any') };
+    trap { App::DB::Migrate::SQLite::Editor::index_by_name('any') };
     like($trap->die, qr/^Could not find index any/);
 };
 
 subtest 'index_by_name fails if dbh fails' => sub {
     my $dbh = Test::MockObject->new
         ->mock('selectall_arrayref', sub { eval { die 'Custom error' }; undef });
-    trap { Migrate::SQLite::Editor::index_by_name('test_idx', $dbh) };
+    trap { App::DB::Migrate::SQLite::Editor::index_by_name('test_idx', $dbh) };
     like($trap->die, qr/^Error querying for index test_idx\nCustom error/);
 };
 
 subtest 'rename_index returns the required SQL to rename an index' => sub {
-    my @sql = Migrate::SQLite::Editor::rename_index('test_index', 'foo');
+    my @sql = App::DB::Migrate::SQLite::Editor::rename_index('test_index', 'foo');
     is_deeply(\@sql, [
         'DROP INDEX "test_index"',
         'CREATE INDEX "foo" ON "test2" ("id")',
@@ -132,14 +132,14 @@ subtest 'rename_index returns the required SQL to rename an index' => sub {
 };
 
 subtest 'rename_index fails if there is no index with that name' => sub {
-    trap { Migrate::SQLite::Editor::rename_index('any', 'foo') };
+    trap { App::DB::Migrate::SQLite::Editor::rename_index('any', 'foo') };
     like($trap->die, qr/^Could not find index any/);
 };
 
 subtest 'rename_index fails if dbh fails' => sub {
     my $dbh = Test::MockObject->new
         ->mock('selectall_arrayref', sub { eval { die 'Custom error' }; undef });
-    trap { Migrate::SQLite::Editor::rename_index('test_idx', 'foo', $dbh) };
+    trap { App::DB::Migrate::SQLite::Editor::rename_index('test_idx', 'foo', $dbh) };
     like($trap->die, qr/^Error querying for index test_idx\nCustom error/);
 };
 

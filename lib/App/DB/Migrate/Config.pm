@@ -4,7 +4,7 @@ our $library_root;
 
 BEGIN {
     use File::Spec;
-    $module = 'lib/Migrate/Config.pm';
+    $module = 'lib/App/DB/Migrate/Config.pm';
     ($library_root = __FILE__) =~ s/\/?$module$//
 }
 

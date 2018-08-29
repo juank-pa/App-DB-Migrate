@@ -8,19 +8,19 @@ use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
 
-use Migrate::SQLite::Handler;
+use App::DB::Migrate::SQLite::Handler;
 
-my $constraint = new Test::MockModule('Migrate::Config');
+my $constraint = new Test::MockModule('App::DB::Migrate::Config');
 $constraint->redefine('config', { dsn => 'dbi:SQLite:sample' });
 
 subtest 'new creates a SQLite Handler' => sub {
-    my $def = Migrate::SQLite::Handler->new;
-    isa_ok($def, 'Migrate::SQLite::Handler');
-    isa_ok($def, 'Migrate::Handler');
+    my $def = App::DB::Migrate::SQLite::Handler->new;
+    isa_ok($def, 'App::DB::Migrate::SQLite::Handler');
+    isa_ok($def, 'App::DB::Migrate::Handler');
 };
 
 my $editor_changed = 0;
-my $editor = Test::MockModule->new('Migrate::SQLite::Editor');
+my $editor = Test::MockModule->new('App::DB::Migrate::SQLite::Editor');
 my $last_editor;
 $editor->redefine('edit_table', sub {
     my $name = shift;
@@ -35,29 +35,29 @@ $editor->redefine('edit_table', sub {
 
 subtest 'flush does not execute SQL if there is no editor' => sub {
     my $sql;
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     $handler->redefine('execute', sub { $sql = $_[1] });
 
-    Migrate::SQLite::Handler->new->flush;
+    App::DB::Migrate::SQLite::Handler->new->flush;
     ok(!$sql);
 };
 
 subtest 'flush does not execute SQL if editor is not changed' => sub {
     my $sql;
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     $handler->{editor} = Test::MockObject->new->mock('has_changed', sub { 0 });
     $handler->redefine('execute', sub { $sql = $_[1] });
 
-    Migrate::SQLite::Handler->new->flush;
+    App::DB::Migrate::SQLite::Handler->new->flush;
     ok(!$sql);
 };
 
 subtest 'flush executes SQL if editor has changed' => sub {
     my $sql;
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     $handler->redefine('execute', sub { $sql = $_[1] });
 
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     $mh->{editor} = Test::MockObject->new
         ->mock('has_changed', sub { 1 })
         ->mock('to_sql', sub { 'any' });
@@ -68,30 +68,30 @@ subtest 'flush executes SQL if editor has changed' => sub {
 subtest 'editor returns the current editor' => sub {
     my $editor = Test::MockObject->new;
 
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     $mh->{editor} = $editor;
     is($mh->editor, $editor);
 };
 
 subtest 'has_editor_for returns false if there is no editor' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     ok(!$mh->has_editor_for('table'));
 };
 
 subtest 'has_editor_for returns false if there is a editor for another table' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     $mh->{editor} = Test::MockObject->new->mock('name', sub { 'table2' });
     ok(!$mh->has_editor_for('table'));
 };
 
 subtest 'has_editor_for returns true if there is a editor for the table' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     $mh->{editor} = Test::MockObject->new->mock('name', sub { 'table' });
     ok($mh->has_editor_for('table'));
 };
 
 subtest 'editor_for creates a new editor if no previous editor existed' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     ok(!$mh->editor);
     is(my $e = $mh->editor_for('table'), $last_editor);
     is($e, $mh->editor);
@@ -99,7 +99,7 @@ subtest 'editor_for creates a new editor if no previous editor existed' => sub {
 };
 
 subtest 'editor_for creates a new editor if an editor existed with another name' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     my $prev = $mh->{editor} = Test::MockObject->new
         ->mock('name', sub { 'table2' })
         ->set_false('has_changed');
@@ -110,11 +110,11 @@ subtest 'editor_for creates a new editor if an editor existed with another name'
 };
 
 subtest 'editor_for flushes the previous editor with another name' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     my $prev_editor = $mh->{editor} = Test::MockObject->new
         ->mock('name', sub { 'table2' })
         ->set_false('has_changed');
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     my ($flushed, $e);
     $handler->redefine('flush', sub { $e = $_[0]->editor; $flushed = 1 });
 
@@ -124,11 +124,11 @@ subtest 'editor_for flushes the previous editor with another name' => sub {
 };
 
 subtest 'editor_for just returns the editor without flushing if it has the same name' => sub {
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     my $prev_editor = $mh->{editor} = Test::MockObject->new
         ->mock('name', sub { 'table' })
         ->set_false('has_changed');
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     my $flushed;
     $handler->redefine('flush', sub { $flushed = 1 });
 
@@ -140,12 +140,12 @@ subtest 'editor_for just returns the editor without flushing if it has the same 
 
 sub test_base_redirect {
     my $name = shift;
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     $handler->redefine('flush', sub { $_[0]->{flushed} = 1; $_[0] });
-    my $handler_base = Test::MockModule->new('Migrate::Handler');
+    my $handler_base = Test::MockModule->new('App::DB::Migrate::Handler');
     $handler_base->redefine($name, sub { $_[0]->{params} = [my @params = @_] });
 
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     $mh->$name('my', 'params');
     ok($mh->{flushed});
     is_deeply($mh->{params}, [$mh, 'my', 'params']);
@@ -178,11 +178,11 @@ sub test_editor_redirect {
     my $has_editor = shift;
     my $editor = Test::MockObject->new
         ->mock($editor_name, sub { $_[0]->{params} = [my @params = @_] });
-    my $handler = Test::MockModule->new('Migrate::SQLite::Handler');
+    my $handler = Test::MockModule->new('App::DB::Migrate::SQLite::Handler');
     $handler->redefine('editor_for', sub { $_[0]->{etable} = $_[1]; $editor });
     $handler->redefine('has_editor_for', sub { $_[0]->{etable_for} = $_[1]; $has_editor });
 
-    my $mh = Migrate::SQLite::Handler->new;
+    my $mh = App::DB::Migrate::SQLite::Handler->new;
     my @params = ('my', 'handler', 'test', 'test4');
     my @real_params = splice(@params, 0, $num_params);
     $mh->$name(@real_params);

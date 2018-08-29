@@ -7,14 +7,14 @@ use Test::MockModule;
 use Test::Trap;
 use File::Spec;
 
-use Migrate::Setup;
+use App::DB::Migrate::Setup;
 
-my $module = new Test::MockModule('Migrate::Setup');
+my $module = new Test::MockModule('App::DB::Migrate::Setup');
 $module->mock(get_dbh => undef);
 
 sub mock_setup {
     my $val = shift;
-    my $module = new Test::MockModule('Migrate::Setup');
+    my $module = new Test::MockModule('App::DB::Migrate::Setup');
     $module->mock(is_migration_setup => sub () { $val } );
     return $module;
 }
@@ -22,7 +22,7 @@ sub mock_setup {
 subtest 'execute prints message migration folder exists' => sub {
     my $module = mock_setup(1);
 
-    trap { Migrate::Setup::execute() };
+    trap { App::DB::Migrate::Setup::execute() };
 
     is($trap->stdout, "Migrations have already been setup.\n");
 };
@@ -33,7 +33,7 @@ subtest 'execute does not perform migrations if migration folder already exists'
     $module->mock(create_migrations_folder => sub { $execs++ } );
     $module->mock(create_migrations_table => sub { $execs++ } );
 
-    Migrate::Setup::execute();
+    App::DB::Migrate::Setup::execute();
 
     is($execs, undef, 'should not execute migration steps');
 };
@@ -43,7 +43,7 @@ subtest 'execute creates migration items if they do not already exist' => sub {
     my $setup;
     $module->mock(setup => sub { $setup++; () } );
 
-    Migrate::Setup::execute();
+    App::DB::Migrate::Setup::execute();
 
     is($setup, 1, 'creates migration folders');
 };
@@ -53,7 +53,7 @@ subtest 'execute prints the setup results' => sub {
     $module->mock(setup => sub { ('File: x', 'Error: y') } );
     my $file = File::Spec->catfile('db','config.pl');
 
-    trap { Migrate::Setup::execute() };
+    trap { App::DB::Migrate::Setup::execute() };
 
     is($trap->stdout, <<EOF);
 Created items:

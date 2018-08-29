@@ -7,12 +7,12 @@ use Test::More;
 use Test::MockObject;
 use Test::MockModule;
 use Test::Trap;
-use Migrate::Factory qw(id);
-use Migrate::SQLite::Editor::Util qw(unquote);
+use App::DB::Migrate::Factory qw(id);
+use App::DB::Migrate::SQLite::Editor::Util qw(unquote);
 
-use Migrate::SQLite::Editor::Parser qw(:all);
+use App::DB::Migrate::SQLite::Editor::Parser qw(:all);
 
-my $constraint = new Test::MockModule('Migrate::Config');
+my $constraint = new Test::MockModule('App::DB::Migrate::Config');
 $constraint->mock('config', { dsn => 'dbi:SQLite:sample' });
 
 # NOTE: These modules works on the assumption of well formed SQL because
@@ -204,7 +204,7 @@ subtest 'parse_constraint tokenizes and parses tokens' => sub {
     my $input_sql = 'Input SQL';
     my @tokens = ('my', 'tokens');
     my ($sql_param, $tokens_param);
-    my $parser = Test::MockModule->new('Migrate::SQLite::Editor::Parser');
+    my $parser = Test::MockModule->new('App::DB::Migrate::SQLite::Editor::Parser');
     $parser->redefine('get_tokens', sub { $sql_param = shift; @tokens });
     $parser->redefine('parse_constraint_tokens', sub { $tokens_param = shift; 'results' });
 
@@ -216,7 +216,7 @@ subtest 'parse_constraint tokenizes and parses tokens' => sub {
 subtest 'parse_column_tokens parses a column' => sub {
     my $tokens = ['column_name', 'INT'];
     my $col = parse_column_tokens($tokens);
-    isa_ok($col, 'Migrate::SQLite::Editor::Column');
+    isa_ok($col, 'App::DB::Migrate::SQLite::Editor::Column');
     is_deeply($tokens,[] ); # always consume all tokens
 };
 
@@ -237,7 +237,7 @@ subtest 'parse_column_tokens parses quoted column name' => sub {
 subtest 'parse_column_tokens parses column datatype' => sub {
     my $tokens = ['column_name', 'INT'];
     my $col = parse_column_tokens($tokens);
-    isa_ok($col->type, 'Migrate::SQLite::Editor::Datatype');
+    isa_ok($col->type, 'App::DB::Migrate::SQLite::Editor::Datatype');
     is_deeply($tokens,[] );
 };
 
@@ -274,7 +274,7 @@ subtest 'parse_column_tokens parses constraints with paser_contraint_tokens unti
 
     my $index = 0;
     my $fake_constraint = Test::MockObject->new();
-    my $parser = Test::MockModule->new('Migrate::SQLite::Editor::Parser');
+    my $parser = Test::MockModule->new('App::DB::Migrate::SQLite::Editor::Parser');
     $parser->redefine(
         'parse_constraint_tokens',
         sub {
@@ -299,7 +299,7 @@ subtest 'parse_column tokenizes and parses tokens' => sub {
     my $input_sql = 'Input SQL';
     my @tokens = ('my', 'tokens');
     my ($sql_param, $tokens_param);
-    my $parser = Test::MockModule->new('Migrate::SQLite::Editor::Parser');
+    my $parser = Test::MockModule->new('App::DB::Migrate::SQLite::Editor::Parser');
     $parser->redefine('get_tokens', sub { $sql_param = shift; @tokens });
     $parser->redefine('parse_column_tokens', sub { $tokens_param = shift; 'result' });
 
@@ -333,7 +333,7 @@ subtest 'split_columns splits a column list SQL string into an array of SQL colu
 subtest 'parse_table returns a table named after the create table SQL' => sub {
     for (('create table table_name (columns)', 'CREATE TABLE table_name(COLUMNS)')) {
         my $tb = parse_table($_);
-        isa_ok($tb, 'Migrate::SQLite::Editor::Table');
+        isa_ok($tb, 'App::DB::Migrate::SQLite::Editor::Table');
         is($tb->name, 'table_name');
     }
 };
@@ -341,7 +341,7 @@ subtest 'parse_table returns a table named after the create table SQL' => sub {
 subtest 'parse_table returns a table named after the create table SQL' => sub {
     for (('create table "table""name" (columns)', 'CREATE TABLE "table""name"(COLUMNS)')) {
         my $tb = parse_table($_);
-        isa_ok($tb, 'Migrate::SQLite::Editor::Table');
+        isa_ok($tb, 'App::DB::Migrate::SQLite::Editor::Table');
         is($tb->name, 'table"name');
     }
 };
@@ -358,7 +358,7 @@ subtest 'parse_table uses split_columns to split content inside parenthesis and 
     my @column_sqls = ('col1 INT', 'col2');
     my @columns = (Test::MockObject->new, Test::MockObject->new);
     my ($sql_param, @col_params);
-    my $parser = Test::MockModule->new('Migrate::SQLite::Editor::Parser');
+    my $parser = Test::MockModule->new('App::DB::Migrate::SQLite::Editor::Parser');
     $parser->redefine('split_columns', sub { $sql_param = shift; @column_sqls });
     $parser->redefine('parse_column', sub { push(@col_params, shift); $columns[$index++] });
 
@@ -376,7 +376,7 @@ subtest 'parse_index parses an index name' => sub {
     );
     for my $input (@inputs) {
         my $idx = parse_index($input);
-        isa_ok($idx, 'Migrate::SQLite::Index');
+        isa_ok($idx, 'App::DB::Migrate::SQLite::Index');
         is($idx->name, 'index_name');
     }
 };

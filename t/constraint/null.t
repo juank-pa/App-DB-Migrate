@@ -5,45 +5,45 @@ use lib 't/lib';
 
 use Test::More;
 
-use Migrate::Constraint::Null;
+use App::DB::Migrate::Constraint::Null;
 
 subtest 'new creates a null constraint' => sub {
-    my $null = Migrate::Constraint::Null->new();
-    isa_ok($null, 'Migrate::Constraint::Null');
+    my $null = App::DB::Migrate::Constraint::Null->new();
+    isa_ok($null, 'App::DB::Migrate::Constraint::Null');
 };
 
 subtest 'is SQLizable' => sub {
-    my $null = Migrate::Constraint::Null->new();
-    isa_ok($null, "Migrate::SQLizable");
+    my $null = App::DB::Migrate::Constraint::Null->new();
+    isa_ok($null, "App::DB::Migrate::SQLizable");
 };
 
 subtest 'is_null when no parameters are sent' => sub {
-    my $null = Migrate::Constraint::Null->new();
+    my $null = App::DB::Migrate::Constraint::Null->new();
     ok($null->is_null);
 };
 
 subtest 'is_null when true is sent' => sub {
-    my $null = Migrate::Constraint::Null->new(1);
+    my $null = App::DB::Migrate::Constraint::Null->new(1);
     ok($null->is_null);
 };
 
 subtest 'is_null is false when false is sent' => sub {
-    my $null = Migrate::Constraint::Null->new(0);
+    my $null = App::DB::Migrate::Constraint::Null->new(0);
     ok(!$null->is_null);
 };
 
 subtest 'to_sql returns SQL representation on undef null' => sub {
-    my $null = Migrate::Constraint::Null->new();
+    my $null = App::DB::Migrate::Constraint::Null->new();
     is($null->to_sql, 'NULL');
 };
 
 subtest 'to_sql returns SQL representation on null' => sub {
-    my $null = Migrate::Constraint::Null->new(1);
+    my $null = App::DB::Migrate::Constraint::Null->new(1);
     is($null->to_sql, 'NULL');
 };
 
 subtest 'to_sql returns SQL representation on null' => sub {
-    my $null = Migrate::Constraint::Null->new(0);
+    my $null = App::DB::Migrate::Constraint::Null->new(0);
     is($null->to_sql, 'NOT NULL');
 };
 

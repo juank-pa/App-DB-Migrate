@@ -8,7 +8,7 @@ use Test::Trap;
 use File::Path qw(remove_tree make_path);
 use File::Spec;
 
-use Migrate::Setup;
+use App::DB::Migrate::Setup;
 
 my $migrations = 'db/migrations';
 my $config = 'db/config.pl';
@@ -16,42 +16,42 @@ my $config_sample = 'db/config.pl.example';
 my $gitignore = 'db/.gitignore';
 
 subtest 'Migrations path' => sub {
-    is(Migrate::Setup::migrations_path, $migrations);
+    is(App::DB::Migrate::Setup::migrations_path, $migrations);
 };
 
 subtest 'is_migration_setup reports false if migrations folder is missing' => sub {
     make_db();
     create_files();
 
-    ok(!Migrate::Setup::is_migration_setup);
+    ok(!App::DB::Migrate::Setup::is_migration_setup);
 };
 
 subtest 'is_migration_setup reports false if config file is missing' => sub {
     make_migrations();
     create_config_sample();
 
-    ok(!Migrate::Setup::is_migration_setup);
+    ok(!App::DB::Migrate::Setup::is_migration_setup);
 };
 
 subtest 'is_migration_setup reports false if sample config file is missing' => sub {
     make_migrations();
     create_config();
 
-    ok(!Migrate::Setup::is_migration_setup);
+    ok(!App::DB::Migrate::Setup::is_migration_setup);
 };
 
 subtest 'is_migration_setup reports true if migrations are setup' => sub {
     make_migrations();
     create_files();
 
-    ok(Migrate::Setup::is_migration_setup, 'Should report migration folder does not exist');
+    ok(App::DB::Migrate::Setup::is_migration_setup, 'Should report migration folder does not exist');
 };
 
 subtest 'create_migrations_folder creates the migrations folder' => sub {
     remove_root();
     ok(!-e $migrations, 'Precondition: migration should not exist');
 
-    Migrate::Setup::create_migrations_folder();
+    App::DB::Migrate::Setup::create_migrations_folder();
 
     ok(-e $migrations, 'Migrations folder should have been created');
 };
@@ -59,7 +59,7 @@ subtest 'create_migrations_folder creates the migrations folder' => sub {
 subtest 'create_migration_config_sample_file copies configuration sample file from templates' => sub {
     remove_root();
 
-    Migrate::Setup::create_migration_config_sample_file();
+    App::DB::Migrate::Setup::create_migration_config_sample_file();
 
     ok(-e $config_sample, 'Migrations sample config copied');
 };
@@ -67,7 +67,7 @@ subtest 'create_migration_config_sample_file copies configuration sample file fr
 subtest 'create_migration_config_sample_file returns 1 if the file did not already exist' => sub {
     remove_root();
 
-    my $res = Migrate::Setup::create_migration_config_sample_file();
+    my $res = App::DB::Migrate::Setup::create_migration_config_sample_file();
 
     ok($res, 'Returns true');
 };
@@ -76,7 +76,7 @@ subtest 'create_migration_config_sample_file returns 0 if the file already exist
     make_migrations();
     create_config_sample();
 
-    my $res = Migrate::Setup::create_migration_config_sample_file();
+    my $res = App::DB::Migrate::Setup::create_migration_config_sample_file();
 
     ok(!$res, 'Returns false');
 };
@@ -84,7 +84,7 @@ subtest 'create_migration_config_sample_file returns 0 if the file already exist
 subtest 'create_migration_config_file when sample does not exists copies config from templates' => sub {
     remove_root();
 
-    Migrate::Setup::create_migration_config_file();
+    App::DB::Migrate::Setup::create_migration_config_file();
 
     ok(-e $config, 'Migrations config template copied');
     like(file_contents($config), qr/dsn =>.*schema =>/s);
@@ -94,7 +94,7 @@ subtest 'create_migration_config_file when sample exists copies config from samp
     make_db();
     create_config_sample('ANY CONTENT');
 
-    Migrate::Setup::create_migration_config_file();
+    App::DB::Migrate::Setup::create_migration_config_file();
 
     ok(-e $config, 'Migrations config template copied');
     is(file_contents($config), 'ANY CONTENT');
@@ -103,7 +103,7 @@ subtest 'create_migration_config_file when sample exists copies config from samp
 subtest 'create_migration_config_file returns true if the file did not already exist' => sub {
     remove_root();
 
-    my $res = Migrate::Setup::create_migration_config_sample_file();
+    my $res = App::DB::Migrate::Setup::create_migration_config_sample_file();
 
     ok($res, 'Returns true');
 };
@@ -112,7 +112,7 @@ subtest 'create_migration_config_file returns false if the file already exists' 
     make_db();
     create_config();
 
-    my $res = Migrate::Setup::create_migration_config_file();
+    my $res = App::DB::Migrate::Setup::create_migration_config_file();
 
     ok(!$res, 'Returns false');
 };
@@ -121,7 +121,7 @@ subtest 'create_gitignore_file returns 0 if the file already exists' => sub {
     make_migrations();
     create_gitignore();
 
-    my $res = Migrate::Setup::create_gitignore_file();
+    my $res = App::DB::Migrate::Setup::create_gitignore_file();
 
     ok(!$res, 'Returns false');
 };
@@ -129,7 +129,7 @@ subtest 'create_gitignore_file returns 0 if the file already exists' => sub {
 subtest 'create_gitignore_file when gitignore does not exists creates one' => sub {
     remove_root();
 
-    Migrate::Setup::create_gitignore_file();
+    App::DB::Migrate::Setup::create_gitignore_file();
 
     ok(-e $gitignore, 'Migrations config template copied');
     is(file_contents($gitignore), "config.pl\n");
@@ -138,7 +138,7 @@ subtest 'create_gitignore_file when gitignore does not exists creates one' => su
 subtest 'setup creates all necessary migration files and folder' => sub {
     remove_root();
 
-    Migrate::Setup::setup();
+    App::DB::Migrate::Setup::setup();
 
     ok(-e $config, 'Migrations config template copied');
     ok(-e $config_sample, 'Migrations config sample template copied');
@@ -150,10 +150,10 @@ subtest 'setup returns a list of created items or errors found' => sub {
     make_db();
     create_config_sample(); # Exists so don't list
 
-    my $module = new Test::MockModule('Migrate::Setup');
+    my $module = new Test::MockModule('App::DB::Migrate::Setup');
     $module->mock(create_migration_config_file => sub { die("File error!!!\n") });
 
-    my @res = Migrate::Setup::setup();
+    my @res = App::DB::Migrate::Setup::setup();
 
     ok(!-e $config, 'Migrations config template copied');
     ok(-e $migrations, 'Migrations config sample template copied');
@@ -162,9 +162,9 @@ subtest 'setup returns a list of created items or errors found' => sub {
 
 subtest 'setup returns an empty list if already setup' => sub {
     remove_root();
-    Migrate::Setup::setup();
+    App::DB::Migrate::Setup::setup();
 
-    my @res = Migrate::Setup::setup();
+    my @res = App::DB::Migrate::Setup::setup();
 
     is(scalar @res, 0, 'Result is empty');
 };
