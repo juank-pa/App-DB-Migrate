@@ -12,7 +12,7 @@ WriteMakefile(
         'DBD::SQLite' => '0',
     },
 	EXE_FILES => [
-		'migrate',
+		'bin/migrate',
 		'script/add.tl',
 		'script/config.pl',
 		'script/create.tl',

@@ -1,4 +1,5 @@
 .proverc
+bin/migrate
 lib/Log.pm
 lib/Migrate.pm
 lib/Migrate/Column.pm
@@ -53,7 +54,6 @@ lib/Migrate/Table.pm
 lib/Migrate/Util.pm
 Makefile.PL
 MANIFEST			This list of files
-migrate
 README.md
 script/add.tl
 script/config.pl
