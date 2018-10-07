@@ -13,14 +13,16 @@ use DBI;
 use feature 'say';
 
 sub new {
-    my ($class, $dry, $output) = @_;
-    bless { dry => $dry, output => $output }, $class;
+    my ($class, $dry, $output, $dbh) = @_;
+    bless { dry => $dry, output => $output, dbh => $dbh }, $class;
 }
+
+sub dbh { shift->{dbh} // get_dbh }
 
 sub execute {
     my $self = shift;
     my @sqls = @_;
-    my $dbh = get_dbh();
+    my $dbh = $self->dbh;
     my $output = $self->{output};
     for my $sql (@sqls) {
         if (!$self->{dry}) {

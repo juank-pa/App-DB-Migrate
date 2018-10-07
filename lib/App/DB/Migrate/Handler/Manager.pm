@@ -27,7 +27,7 @@ sub execute {
     $self->startup();
 
     eval {
-        $self->run_function($code, $self->get_handler);
+        $self->_run_function($code, $self->get_handler);
         $self->record_migration($direction, $migration_id) unless $self->{dry};
     };
 
@@ -36,12 +36,13 @@ sub execute {
 
 sub shutdown {
     my $self = shift;
-    return $self->dbh->commit unless $@;
+    my $error = $@;
+    return $self->dbh->commit unless $error;
     $self->dbh->rollback;
-    die($@);
+    die($error);
 }
 
-sub get_handler { my $self = shift; handler($self->{dry}, $self->{output}) }
+sub get_handler { my $self = shift; handler($self->{dry}, $self->{output}, $self->dbh) }
 
 sub run_function {
     my ($self, $code, $handler) = @_;

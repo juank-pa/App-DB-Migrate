@@ -66,7 +66,7 @@ subtest 'primary_key returns id' => sub {
 
 subtest 'primary_key default name depends on config' => sub {
     my $config = new Test::MockModule('App::DB::Migrate::Config');
-    $config->mock(id => 'any_id');
+    $config->redefine(id => 'any_id');
 
     my $pk = App::DB::Migrate::Constraint::ForeignKey->new('users', 'departments');
     is($pk->primary_key, 'any_id');
