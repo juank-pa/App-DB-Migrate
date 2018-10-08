@@ -169,4 +169,73 @@ subtest 'record_migration dies if SQL fails' => sub {
     like($trap->die, qr/^Error recording migration data \(down\)/);
 };
 
+subtest 'execute starts up, runs the migration function, records the migration and shuts down' => sub {
+    my @steps;
+    $mng_mod->redefine(startup => sub { push @steps, 'startup' });
+    $mng_mod->redefine(run_function => sub { push @steps, 'run_function' });
+    $mng_mod->redefine(record_migration => sub { push @steps, 'record_migration' });
+    $mng_mod->redefine(shutdown => sub { push @steps, 'shutdown' });
+
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    $mng->execute(sub {}, 'mig_id', 'up');
+
+    is_deeply(\@steps, [qw(startup run_function record_migration shutdown)]);
+};
+
+subtest 'execute passes the function and a new handler to run function' => sub {
+    my @args;
+    my $handler = Test::MockObject->new();
+    $mng_mod->redefine(run_function => sub { @args = @_ });
+    $mng_mod->redefine(get_handler => $handler);
+
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    my $code = sub {};
+    $mng->execute($code, 'mig_id', 'up');
+
+    is_deeply(\@args, [$mng, $code, $handler]);
+};
+
+subtest 'execute passes direction and migration id to record_migration' => sub {
+    my @args;
+    $mng_mod->redefine(record_migration => sub { @args = @_ });
+
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    $mng->execute(sub {}, 'mig_id', 'up');
+
+    is_deeply(\@args, [$mng, 'up', 'mig_id']);
+};
+
+subtest 'execute does not records a migration in dry mode' => sub {
+    my $recorded = 0;
+    $mng_mod->redefine(record_migration => sub { $recorded = 1 });
+
+    my $mng = App::DB::Migrate::Handler::Manager->new(1);
+    $mng->execute(sub {}, 'mig_id', 'up');
+
+    ok(!$recorded);
+};
+
+subtest 'execute dies if no function is provided' => sub {
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    trap { $mng->execute(undef, 'mig_id', 'up') };
+    like($trap->die, qr/^Code needed/);
+};
+
+subtest 'execute dies if no function is provided' => sub {
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    trap { $mng->execute(sub {}, undef, 'up') };
+    like($trap->die, qr/^Migration id needed/);
+};
+
+subtest 'execute default to up if direction is not given' => sub {
+    my @args;
+    my $handler = Test::MockObject->new();
+    $mng_mod->redefine(record_migration => sub { @args = @_ });
+
+    my $mng = App::DB::Migrate::Handler::Manager->new();
+    $mng->execute(sub {}, 'mig_id');
+
+    is($args[1], 'up');
+};
+
 done_testing();

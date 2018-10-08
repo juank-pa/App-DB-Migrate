@@ -27,7 +27,7 @@ sub execute {
     $self->startup();
 
     eval {
-        $self->_run_function($code, $self->get_handler);
+        $self->run_function($code, $self->get_handler);
         $self->record_migration($direction, $migration_id) unless $self->{dry};
     };
 

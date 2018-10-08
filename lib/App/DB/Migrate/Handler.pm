@@ -22,11 +22,10 @@ sub dbh { shift->{dbh} // get_dbh }
 sub execute {
     my $self = shift;
     my @sqls = @_;
-    my $dbh = $self->dbh;
     my $output = $self->{output};
     for my $sql (@sqls) {
         if (!$self->{dry}) {
-            my $sth = $dbh->prepare($sql) or die("$DBI::errstr\n$sql");
+            my $sth = $self->dbh->prepare($sql) or die("$DBI::errstr\n$sql");
             $sth->execute() or die("$DBI::errstr\n$sql");
         }
         (say $output "$sql;") if $output;
